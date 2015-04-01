@@ -1,4 +1,4 @@
-module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, Mem_sel);
+module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, Mem_sel, output reg [1:0] Mode_Set, input [1:0] Mode, output reg Bad_Instr, input Store_Current);
 
 // Opcode of instruction
 localparam ADD = 4'h0;
@@ -19,9 +19,9 @@ localparam RECV = 4'he;
 
 always @(*) begin
 	we = 0;
-	p0_addr = instr[7:4];
-	p1_addr = instr[3:0];
-	dst_addr = instr[11:8];
+	p0_addr = 0;
+	p1_addr = 0;
+	dst_addr = 0;
 	Updateflag = 2'b00;
 	Alu_Op = 3'h0;
 	Imme = instr[7:0];
@@ -36,24 +36,45 @@ always @(*) begin
 	Mem_re = 0;
 	Mem_we = 0;
 	Mem_sel = 0;
+	Mode_Set = 0;
 
 	case (instr[15:12])
 		ADD: begin
-			we = |dst_addr;
-			Updateflag = {|dst_addr,|dst_addr};
+			p0_addr = instr[7:4];
+			p1_addr = instr[3:0];
+			if (Store_Current) begin
+				dst_addr = 4'hf;
+				we =1;
+				branch_PC = i_addr;
+				source_sel = 2'b01;
+			end
+			else begin
+				dst_addr = instr[11:8];
+				we = |instr[11:8];
+				branch_PC = 16'hxxxx;
+				source_sel = 2'b00;
+			end
+			Updateflag = {|instr[11:8],|instr[11:8]};
 		end
 		SUB: begin
-			we = |dst_addr;
+			p0_addr = instr[7:4];
+			p1_addr = instr[3:0];
+			dst_addr = instr[11:8];
+			we = |instr[11:8];
 			Alu_Op = 3'h1;
-			Updateflag = {|dst_addr,|dst_addr};
+			Updateflag = {|instr[11:8],|instr[11:8]};
 		end
 		XOR: begin
+			p0_addr = instr[7:4];
+			p1_addr = instr[3:0];
+			dst_addr = instr[11:8];
 			Alu_Op = 3'h2;
-			we = |dst_addr;
-			Updateflag = {|dst_addr,1'b0};
+			we = |instr[11:8];
+			Updateflag = {|instr[11:8],1'b0};
 		end
 		SHIFT: begin
-			we = |dst_addr;
+			we = |instr[11:8];
+			dst_addr = instr[11:8];
 			p0_addr = instr[11:8];
 			case (instr[5:4])
 				2'h0: Alu_Op = 3'h3; // sll
@@ -64,13 +85,15 @@ always @(*) begin
 			p1_sel = 1;
 		end
 		LLOW: begin
-			we = |dst_addr;
+			we = |instr[11:8];
+			dst_addr = instr[11:8];
 			p0_addr = instr[11:8];
 			Alu_Op = 3'h6;
 			p1_sel = 1;
 		end
 		LHIGH: begin
-			we = |dst_addr;
+			we = |instr[11:8];
+			dst_addr = instr[11:8];
 			p0_addr = instr[11:8];
 			Alu_Op = 3'h7;
 			p1_sel = 1;
@@ -102,6 +125,10 @@ always @(*) begin
 			jump =1;
 			J_sel = 1;
 			p0_addr = instr[11:8];
+			if (Mode[1] == 1) 
+				Mode_Set = instr[1:0]+1;
+			else
+				Mode_Set = 2'b00;
 		end
 		JLINK: begin
 			jump = 1;
@@ -109,18 +136,28 @@ always @(*) begin
 			branch_PC = i_addr + 1; // use branch_PC  to store current PC
 			we = 1;
 			dst_addr = 4'hc;
-			Updateflag = 2'b00;
 			source_sel = 2'b01;
 		end
 		LOAD: begin
+			p0_addr = instr[7:4];
+			dst_addr = instr[11:8];
 			Mem_re = 1;
 			Mem_sel = 1;
-			we = |dst_addr;
+			we = |instr[11:8];
 		end
 		STORE: begin
 			Mem_we = 1;
 			we = 0;
+			p0_addr = instr[7:4];
 			p1_addr = instr[11:8];
+		end
+		SEND: begin
+			Imme = instr[11:4];
+			p1_addr = instr[11:8];
+			p1_sel = instr[0];
+		end
+		SET: begin
+			Mode_Set = instr[11:10] + 1;
 		end
 
 		default:
@@ -128,4 +165,15 @@ always @(*) begin
 	endcase
 end
 
+// Previlege Check
+always@(*) begin
+	if (Mode == 2'b01) begin
+		if (p0_addr > 4'hc || p1_addr > 4'hc || dst_addr > 4'hc || instr[15:12] == RECV)
+			Bad_Instr = 1;
+		else
+			Bad_Instr = 0;
+	end
+	else
+		Bad_Instr = 0;
+end
 endmodule

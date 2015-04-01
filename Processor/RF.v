@@ -15,7 +15,7 @@ module RF(input clk, rst, we, input[3:0] p0_addr, p1_addr, dst_addr, input[15:0]
 		if ( rst )
 			for (indx = 0; indx < 16; indx = indx + 1)
 				RF[indx] <= 0;
-		else if (clk && we && |dst_addr)
+		else if (clk && we)
 			RF[dst_addr] <= dst;
 	
 endmodule

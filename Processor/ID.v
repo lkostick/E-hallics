@@ -1,4 +1,4 @@
-module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel);
+module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, Mem_sel);
 
 // Opcode of instruction
 localparam ADD = 4'h0;
@@ -33,6 +33,9 @@ always @(*) begin
 	taken = 0;
 	J_sel = 0;
 	source_sel = 2'b00;
+	Mem_re = 0;
+	Mem_we = 0;
+	Mem_sel = 0;
 
 	case (instr[15:12])
 		ADD: begin
@@ -109,6 +112,17 @@ always @(*) begin
 			Updateflag = 2'b00;
 			source_sel = 2'b01;
 		end
+		LOAD: begin
+			Mem_re = 1;
+			Mem_sel = 1;
+			we = |dst_addr;
+		end
+		STORE: begin
+			Mem_we = 1;
+			we = 0;
+			p1_addr = instr[11:8];
+		end
+
 		default:
 			we = 0;
 	endcase

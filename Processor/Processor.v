@@ -1,49 +1,45 @@
 // Not include cache
-module Processor(clk, rst, i_hit, instr, i_addr);
+module Processor(clk, rst, i_hit, instr, i_addr, d_hit, d_addr, Mem_re, Mem_we, wrt_data, rd_data);
 
-	input clk, rst, i_hit;
-	input [15:0] instr;
-	output [15:0] i_addr;
-	
-	wire jump, stall, J;
-	wire [15:0] J_R, instr_ID, instr_IFID_out, PC_out,instr_out;
+	input clk, rst, i_hit, d_hit;
+	input [15:0] instr, rd_data;
+	output [15:0] i_addr, d_addr, wrt_data;
+	output Mem_re, Mem_we;
 
-	// IF
-	PC iPC(.clk(clk), .rst(rst), .i_hit(i_hit), .jump(J), .stall(stall), .J_R(J_R), .PC(i_addr));
-	Instr_MUX iMUX1(.i_hit(i_hit), .jump(J), .instr_i(instr), .instr_o(instr_out));
-
-	IF_ID iREG1(.clk(clk), .rst(rst), .instr_in(instr_out), .instr_out(instr_IFID_out), .PC_in(i_addr), .PC_out(PC_out));
-
-	// ID
-	
-	wire we_IDEX_in, we_IDEX_out, p1_sel;
-	wire [15:0] p0_IDEX_in, p0_IDEX_out, p1, p1_IDEX_in, p1_IDEX_out;
-	wire [3:0] p0_addr, p1_addr, dst_addr_IDEX_in, dst_addr_IDEX_out;
+	wire jump, PC_stall, IFID_stall, IDEX_stall, EXMEM_stall, MEMWB_stall, IDEX_flush, J, we_IDEX_in, we_IDEX_out, p1_sel, p0_ID_bypass, p1_ID_bypass, we_MEMWB_out, taken_IDEX_in, taken_IDEX_out, J_sel, Mem_re_IDEX_in, Mem_re_IDEX_out, Mem_we_IDEX_in, Mem_we_IDEX_out, Mem_sel_IDEX_in, Mem_sel_IDEX_out, Z_in, Z_out, OV_in, OV_out, N_in, N_out, p0_EX_bypass, p1_EX_bypass, we_EXMEM_out, Mem_re_EXMEM_out, Mem_we_EXMEM_out, Mem_sel_EXMEM_out;
+	wire [15:0] J_R, instr_ID, instr_IFID_out, PC_out,instr_out, p0_IDEX_in, p0_IDEX_out, p0, p0_bypass_in, p1, p1_bypass_in, p1_bypass_out, p1_IDEX_in, p1_IDEX_out, alu_out, data_EXMEM_in, data_EXMEM_out, p0_EXMEM_in, p1_EXMEM_in, data_MEMWB_out, J_PC, J_PC_out, branch_PC_IDEX_in, branch_PC_IDEX_out, data_MEMWB_in;
+	wire [3:0] p0_addr, p1_addr, dst_addr_IDEX_in, dst_addr_IDEX_out, dst_addr_MEMWB_out, p0_addr_IDEX_out, p1_addr_IDEX_out, dst_addr_EXMEM_out;
 	wire [2:0] Alu_Op_IDEX_in, Alu_Op_IDEX_out, condition_IDEX_in, condition_IDEX_out;
 	wire [7:0] Imme;
 	wire [1:0] Updateflag_IDEX_in, Updateflag_IDEX_out, source_sel_IDEX_in, source_sel_IDEX_out;
-	wire [15:0] data_MEMWB_out, J_PC, J_PC_out, branch_PC_IDEX_in, branch_PC_IDEX_out;
-	wire we_MEMWB_out, taken_IDEX_in, taken_IDEX_out, J_sel;
-	wire[3:0] dst_addr_MEMWB_out;
+
+	// IF
+	PC iPC(.clk(clk), .rst(rst), .i_hit(i_hit), .jump(J), .stall(PC_stall), .J_R(J_R), .PC(i_addr));
+	Instr_MUX iMUX1(.i_hit(i_hit), .jump(J), .instr_i(instr), .instr_o(instr_out));
+
+	IF_ID iREG1(.clk(clk), .rst(rst), .stall(IFID_stall), .instr_in(instr_out), .instr_out(instr_IFID_out), .PC_in(i_addr), .PC_out(PC_out));
+
+	// ID
+	
 
 	Flush_MUX iMUX3(.miss(miss), .instr_in(instr_IFID_out), .instr_out(instr_ID));
-	ID iID(.instr(instr_ID), .we(we_IDEX_in), .p0_addr(p0_addr), .p1_addr(p1_addr), .dst_addr(dst_addr_IDEX_in),.Alu_Op(Alu_Op_IDEX_in), .Imme(Imme), .Updateflag(Updateflag_IDEX_in), .p1_sel(p1_sel), .jump(jump), .new_PC(J_PC), .branch_PC(branch_PC_IDEX_in), .i_addr(PC_out), .condition(condition_IDEX_in), .taken(taken_IDEX_in), .J_sel(J_sel), .source_sel(source_sel_IDEX_in));
+	ID iID(.instr(instr_ID), .we(we_IDEX_in), .p0_addr(p0_addr), .p1_addr(p1_addr), .dst_addr(dst_addr_IDEX_in),.Alu_Op(Alu_Op_IDEX_in), .Imme(Imme), .Updateflag(Updateflag_IDEX_in), .p1_sel(p1_sel), .jump(jump), .new_PC(J_PC), .branch_PC(branch_PC_IDEX_in), .i_addr(PC_out), .condition(condition_IDEX_in), .taken(taken_IDEX_in), .J_sel(J_sel), .source_sel(source_sel_IDEX_in), .Mem_re(Mem_re_IDEX_in), .Mem_we(Mem_we_IDEX_in), .Mem_sel(Mem_sel_IDEX_in));
 
-	RF iRF(.clk(clk), .rst(rst), .we(we_MEMWB_out), .p0_addr(p0_addr), .p1_addr(p1_addr), .dst_addr(dst_addr_MEMWB_out), .dst(data_MEMWB_out), .p0(p0_IDEX_in), .p1(p1));
+	RF iRF(.clk(clk), .rst(rst), .we(we_MEMWB_out), .p0_addr(p0_addr), .p1_addr(p1_addr), .dst_addr(dst_addr_MEMWB_out), .dst(data_MEMWB_out), .p0(p0), .p1(p1));
 
-	P1_MUX iMUX2(.sel(p1_sel), .imme(Imme), .p1(p1), .data(p1_IDEX_in));
+	Bypass_MUX ip0IDBY(.sel(p0_ID_bypass), .in(p0), .bypass(p0_bypass_in), .out(p0_IDEX_in));
+	Bypass_MUX ip1IDBY(.sel(p1_ID_bypass), .in(p1), .bypass(p1_bypass_in), .out(p1_bypass_out));
+	
+
+	P1_MUX iMUX2(.sel(p1_sel), .imme(Imme), .p1(p1_bypass_out), .data(p1_IDEX_in));
 
 	JR_MUX iMUX4(.sel(J_sel), .imme(J_PC), .Reg(p0_IDEX_in), .J_R(J_PC_out));
 
 	Monitor iMON(.miss(miss), .jump(jump), .new_PC(J_PC_out), .branch_PC(branch_PC_IDEX_out), .J_R(J_R), .J(J));
 
-	ID_EX iREG2(.clk(clk), .rst(rst), .Alu_Op_in(Alu_Op_IDEX_in), .Alu_Op_out(Alu_Op_IDEX_out), .we_in(we_IDEX_in), .we_out(we_IDEX_out), .dst_addr_in(dst_addr_IDEX_in), .dst_addr_out(dst_addr_IDEX_out), .Updateflag_in(Updateflag_IDEX_in), .Updateflag_out(Updateflag_IDEX_out), .p0_in(p0_IDEX_in), .p0_out(p0_IDEX_out), .p1_in(p1_IDEX_in), .p1_out(p1_IDEX_out), .condition_in(condition_IDEX_in), .condition_out(condition_IDEX_out), .taken_in(taken_IDEX_in), .taken_out(taken_IDEX_out), .branch_PC_in(branch_PC_IDEX_in), .branch_PC_out(branch_PC_IDEX_out), .source_sel_in(source_sel_IDEX_in), .source_sel_out(source_sel_IDEX_out));
+	ID_EX iREG2(.clk(clk), .rst(rst), .stall(IDEX_stall), .flush(IDEX_flush), .Alu_Op_in(Alu_Op_IDEX_in), .Alu_Op_out(Alu_Op_IDEX_out), .we_in(we_IDEX_in), .we_out(we_IDEX_out), .dst_addr_in(dst_addr_IDEX_in), .dst_addr_out(dst_addr_IDEX_out), .Updateflag_in(Updateflag_IDEX_in), .Updateflag_out(Updateflag_IDEX_out), .p0_in(p0_IDEX_in), .p0_out(p0_IDEX_out), .p1_in(p1_IDEX_in), .p1_out(p1_IDEX_out), .condition_in(condition_IDEX_in), .condition_out(condition_IDEX_out), .taken_in(taken_IDEX_in), .taken_out(taken_IDEX_out), .branch_PC_in(branch_PC_IDEX_in), .branch_PC_out(branch_PC_IDEX_out), .source_sel_in(source_sel_IDEX_in), .source_sel_out(source_sel_IDEX_out), .Mem_re_in(Mem_re_IDEX_in), .Mem_re_out(Mem_re_IDEX_out), .Mem_we_in(Mem_we_IDEX_in), .Mem_we_out(Mem_we_IDEX_out), .Mem_sel_in(Mem_sel_IDEX_in), .Mem_sel_out(Mem_sel_IDEX_out), .p0_addr_in(p0_addr), .p0_addr_out(p0_addr_IDEX_out), .p1_addr_in(p1_addr), .p1_addr_out(p1_addr_IDEX_out));
 
 	// EX
-	wire Z_in, Z_out, OV_in, OV_out, N_in, N_out;
-	wire[15:0] alu_out, data_EXMEM_in, data_EXMEM_out;
-	wire we_EXMEM_out;
-	wire [3:0] dst_addr_EXMEM_out;
 
 	alu_main iALU(.P1(p0_IDEX_out), .P2(p1_IDEX_out), .Opcode(Alu_Op_IDEX_out), .Result(alu_out), .Z(Z_in), .OV(OV_in), .N(N_in));
 	Flags iFLAG(.clk(clk), .rst(rst), .Z(Z_in), .OV(OV_in), .N(N_in), .Update(Updateflag_IDEX_out), .z(Z_out), .ov(OV_out), .n(N_out));
@@ -52,10 +48,20 @@ module Processor(clk, rst, i_hit, instr, i_addr);
 
 	Source_MUX iMUX5(.sel(source_sel_IDEX_out), .JL_PC(branch_PC_IDEX_out), .alu(alu_out), .data(data_EXMEM_in));
 
-	EX_MEM iREG3(.clk(clk), .rst(rst), .alu_in(data_EXMEM_in), .alu_out(data_EXMEM_out), .we_in(we_IDEX_out), .we_out(we_EXMEM_out), .dst_addr_in(dst_addr_IDEX_out), .dst_addr_out(dst_addr_EXMEM_out));
-
+	Bypass_MUX ip0EX(.sel(p0_EX_bypass), .in(p0_IDEX_out), .bypass(data_MEMWB_in), .out(p0_EXMEM_in));
+	Bypass_MUX ip1EX(.sel(p1_EX_bypass), .in(p1_IDEX_out), .bypass(data_MEMWB_in), .out(p1_EXMEM_in));
+	
+	EX_MEM iREG3(.clk(clk), .rst(rst), .stall(EXMEM_stall), .alu_in(data_EXMEM_in), .alu_out(data_EXMEM_out), .we_in(we_IDEX_out), .we_out(we_EXMEM_out), .dst_addr_in(dst_addr_IDEX_out), .dst_addr_out(dst_addr_EXMEM_out), .Mem_re_in(Mem_re_IDEX_out), .Mem_re_out(Mem_re), .Mem_we_in(Mem_we_IDEX_out), .Mem_we_out(Mem_we), .Mem_sel_in(Mem_sel_IDEX_out), .Mem_sel_out(Mem_sel_EXMEM_out), .d_addr_in(p0_EXMEM_in), .d_addr_out(d_addr), .wrt_data_in(p1_EXMEM_in), .wrt_data_out(wrt_data));
 
 	//MEM
+	Memory_MUX iMUX6(.sel(Mem_sel_EXMEM_out), .alu(data_EXMEM_out), .mem(rd_data), .data(data_MEMWB_in));
 
-	MEM_WB iREG4(.clk(clk), .rst(rst), .data_in(data_EXMEM_out), .data_out(data_MEMWB_out), .we_in(we_EXMEM_out), .we_out(we_MEMWB_out), .dst_addr_in(dst_addr_EXMEM_out), .dst_addr_out(dst_addr_MEMWB_out));
+	MEM_WB iREG4(.clk(clk), .rst(rst), .stall(MEMWB_stall), .data_in(data_MEMWB_in), .data_out(data_MEMWB_out), .we_in(we_EXMEM_out), .we_out(we_MEMWB_out), .dst_addr_in(dst_addr_EXMEM_out), .dst_addr_out(dst_addr_MEMWB_out));
+
+
+	// Stall Controller
+	Stall_Ctrl iSTL(.d_hit(d_hit), .Mem_re(Mem_re), .PC_stall(PC_stall), .IFID_stall(IFID_stall), .IDEX_stall(IDEX_stall), .EXMEM_stall(EXMEM_stall), .MEMWB_stall(MEMWB_stall), .IDEX_flush(IDEX_flush), .Mem_re_EX(Mem_re_IDEX_out), .Mem_we_ID(Mem_we_IDEX_in), .dst_addr(dst_addr_IDEX_out), .p0_addr(p0_addr), .p1_addr(p1_addr));
+
+	// Bypass
+	Bypass iBY(.p0_addr_ID(p0_addr), .p1_addr_ID(p1_addr), .dst_addr_EX(dst_addr_IDEX_out), .dst_addr_MEM(dst_addr_EXMEM_out), .p0_addr_EX(p0_addr_IDEX_out), .p1_addr_EX(p1_addr_IDEX_out), .we_ex(we_IDEX_out), .we_mem(we_EXMEM_out), .dst_ex(data_EXMEM_in), .dst_mem(data_MEMWB_in), .p0_ID_bypass(p0_ID_bypass), .p1_ID_bypass(p1_ID_bypass), .p0_bypass_in(p0_bypass_in), .p1_bypass_in(p1_bypass_in), .p0_EX_bypass(p0_EX_bypass), .p1_EX_bypass(p1_EX_bypass));
 endmodule

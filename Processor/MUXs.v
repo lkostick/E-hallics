@@ -45,3 +45,19 @@ always @(*)
 			data = alu;
 	endcase
 endmodule
+
+module Memory_MUX(input sel, input [15:0]  alu, input [15:0] mem, output reg [15:0] data);
+always @(*)
+	if (sel)
+		data = mem;
+	else
+		data = alu;
+endmodule
+
+module Bypass_MUX(input sel, input [15:0] in, input [15:0] bypass, output reg [15:0] out);
+always @(*)
+	if (sel)
+		out = bypass;
+	else
+		out = in;
+endmodule

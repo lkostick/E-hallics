@@ -80,10 +80,10 @@ module alu_main(P1, P2, Opcode, Result, Z, OV, N);
 							end		
 							
 			Opcodell:	begin	//Load low
-								Result = {8'h00, P1[7:0]};
+								Result = {8'h00, P2[7:0]};
 							end
 			Opcodelh:	begin	//Load high
-								Result = {P1[7:0], P2[7:0]};
+								Result = {P2[7:0], P1[7:0]};
 							end
 		
 			default: begin

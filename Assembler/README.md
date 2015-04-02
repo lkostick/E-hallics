@@ -3,8 +3,53 @@ Assembler
 Usage: java -jar asmbl.jar \<input file> \> \<output file>
 
 Instruction format:
-	1. Add \<Rd> \<Rt> \<Rs>
-	2. Sub \<Rd> \<Rt> \<Rs>
-	3. Xor \<Rd> \<Rt> \<Rs>
 
+	1. Add <Rd> <Rs> <Rt>
+	2. Sub <Rd> <Rs> <Rt>
+	3. Xor <Rd> <Rs> <Rt>
+	4. Ld <Rd> <Rs>
+	5. Sw <Rd> <Rs>
+	6. Lh <Rd> <Imme>
+	7. Ll <Rd> <Imme>
+	8. Shift <Rd> <Shift_Mode> <Imme>
+	9. B <Cond> <Imme or Flag>
+	10. JL <Imme or Flag>
+	11. JR <Rd> <Set_Mode> or JR <Rd>
+	12. Send <Rd> <Send_Mode>
+	13. Set <Set_Mode>
 
+\<Set_Mode> : idle, user, previous.
+
+\<Send_Mode> : low, high
+
+\<Shift_Mode> : leftlogic, rightlogic, rightarith
+
+\<Cond> : eq, neq, gt, lt, gte, lte, ov, uncond
+
+\<Imme> : Decimal or hex number, hex number should start with 0x
+
+\<Flag> : Can be any combination of letter and\or digit except reserved word
+
+Letters in instruction: Can be capital or lower-case letter, like add or ADD, eq or EQ
+
+Seperate: Different areas in instructions should be seperated by space, tab or comma
+
+Example:
+
+	Add r0 R1 R2
+	sub R3,R1,R2
+	XOR R5, ra, rc
+	ld r1	r2
+	FLAG1:
+	SW r1	r3
+	lh r9 123
+	ll r9 0x22
+	Shift r8 LeftLogic 4
+	B lte FLAG1
+	jl FLAG2
+	Jr rf
+	jr Rc idle
+	FLAG2: send ra low
+	send ra high
+	send 0x45
+	Set previous

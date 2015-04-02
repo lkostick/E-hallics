@@ -61,3 +61,11 @@ always @(*)
 	else
 		out = in;
 endmodule
+
+module SPART_MUX(input sel, input[15:0] p1, output reg[7:0] out);
+always @(*)
+	if (sel)
+		out = p1[15:8];
+	else
+		out = p1[7:0];
+endmodule

@@ -1,4 +1,4 @@
-module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, Mem_sel, output reg [1:0] Mode_Set, input [1:0] Mode, output reg Bad_Instr, input Store_Current);
+module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, Mem_sel, output reg [1:0] Mode_Set, input [1:0] Mode, output reg Bad_Instr, input Store_Current, output reg send_sel, output reg send);
 
 // Opcode of instruction
 localparam ADD = 4'h0;
@@ -37,6 +37,8 @@ always @(*) begin
 	Mem_we = 0;
 	Mem_sel = 0;
 	Mode_Set = 0;
+	send_sel = 0;
+	send = 0;
 
 	case (instr[15:12])
 		ADD: begin
@@ -126,7 +128,7 @@ always @(*) begin
 			J_sel = 1;
 			p0_addr = instr[11:8];
 			if (Mode[1] == 1) 
-				Mode_Set = instr[1:0]+1;
+				Mode_Set = instr[1:0];
 			else
 				Mode_Set = 2'b00;
 		end
@@ -154,10 +156,12 @@ always @(*) begin
 		SEND: begin
 			Imme = instr[11:4];
 			p1_addr = instr[11:8];
-			p1_sel = instr[0];
+			p1_sel = instr[1];
+			send_sel = instr[0];
+			send = 1;
 		end
 		SET: begin
-			Mode_Set = instr[11:10] + 1;
+			Mode_Set = instr[11:10];
 		end
 
 		default:

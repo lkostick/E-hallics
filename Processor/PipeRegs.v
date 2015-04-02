@@ -20,7 +20,7 @@ module IF_ID(clk, rst, stall, instr_in, instr_out, PC_in, PC_out);
 	end
 endmodule
 
-module ID_EX(clk, rst, stall, flush, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_addr_in, dst_addr_out, Updateflag_in, Updateflag_out, p0_in, p0_out, p1_in, p1_out, condition_in, condition_out, taken_in, taken_out, branch_PC_in, branch_PC_out, source_sel_in, source_sel_out, Mem_re_in, Mem_re_out, Mem_we_in, Mem_we_out, Mem_sel_in, Mem_sel_out, p0_addr_in, p0_addr_out, p1_addr_in, p1_addr_out, Mode_in, Mode_out);
+module ID_EX(clk, rst, stall, flush, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_addr_in, dst_addr_out, Updateflag_in, Updateflag_out, p0_in, p0_out, p1_in, p1_out, condition_in, condition_out, taken_in, taken_out, branch_PC_in, branch_PC_out, source_sel_in, source_sel_out, Mem_re_in, Mem_re_out, Mem_we_in, Mem_we_out, Mem_sel_in, Mem_sel_out, p0_addr_in, p0_addr_out, p1_addr_in, p1_addr_out, Mode_in, Mode_out, send_sel_in, send_sel_out, send_in, send_out);
 
 	input clk, rst, we_in, stall, flush;
 	input [3:0] dst_addr_in;
@@ -46,6 +46,8 @@ module ID_EX(clk, rst, stall, flush, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_a
 	output reg [3:0] p0_addr_out, p1_addr_out;
 	input [1:0] Mode_in;
 	output reg [1:0] Mode_out;
+	input send_sel_in, send_in;
+	output reg send_sel_out, send_out;
 
 	always @(posedge clk, posedge rst) begin
 		if (rst| flush) begin
@@ -64,6 +66,8 @@ module ID_EX(clk, rst, stall, flush, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_a
 			Mem_sel_out <= 0;
 			p0_addr_out <= 0;
 			p1_addr_out <= 0;
+			send_sel_out <= 0;
+			send_out <= 0;
 		end
 		else if (stall) begin
 			Alu_Op_out <= Alu_Op_out;
@@ -81,6 +85,8 @@ module ID_EX(clk, rst, stall, flush, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_a
 			Mem_sel_out <= Mem_sel_out;
 			p0_addr_out <= p0_addr_out;
 			p1_addr_out <= p1_addr_out;
+			send_sel_out <= send_sel_out;
+			send_out <= send_in;
 		end
 		else begin
 			Alu_Op_out <= Alu_Op_in;
@@ -98,6 +104,8 @@ module ID_EX(clk, rst, stall, flush, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_a
 			Mem_sel_out <= Mem_sel_in;
 			p0_addr_out <= p0_addr_in;
 			p1_addr_out <= p1_addr_in;
+			send_sel_out<= send_sel_in;
+			send_out <= send_in;
 		end
 		Mode_out <= Mode_in;
 	end

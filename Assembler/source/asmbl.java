@@ -27,7 +27,7 @@ public class asmbl {
 			System.err.println("Exception occured during parse: "+ ex);
 			System.exit(-1);
 		}
-
+		((ProgramNode)root.value).FlagCheck();
 		((ASTnode)root.value).translate();
 		return;
     }

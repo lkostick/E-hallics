@@ -1,0 +1,200 @@
+/**********************************************************************
+ Java CUP specification for a parser for C-- programs
+ **********************************************************************/
+
+import java_cup.runtime.*;
+import java.util.*;
+
+/* The code below redefines method syntax_error to give better error messages
+ * than just "Syntax error"
+ */
+parser code {:
+
+public void syntax_error(Symbol currToken) {
+    if (currToken.value == null) {
+        System.err.println(0 +":"+ 0 +" Syntax error at end of file");
+    }
+    else {
+		System.err.println(((TokenVal)currToken.value).linenum +":"+
+                     ((TokenVal)currToken.value).charnum + " Syntax Error"
+                     );
+    }
+    System.exit(-1);
+}
+:};
+
+
+/* Terminals (tokens returned by the scanner) */
+terminal TokenVal       ADD, SUB, XOR, LD, SW, LH, LL, SHIFT,
+						BRANCH, JLINK, JREG, CTRL, SEND, SET, 
+						RECV, REG, INT, SHIFTMODE, COND, STR, FLAG,
+						SETMODE, SENDMODE;
+
+
+/* Nonterminals
+ *
+ */
+non terminal ProgramNode      program;
+non terminal LinkedList       instrList;
+non terminal InstrNode        instr;
+
+
+start with program;
+
+
+/* Grammar with actions
+ */
+program         ::= instrList: i
+                {: RESULT = new ProgramNode(new InstrListNode(i));
+                :}
+                ;
+
+instrList        ::= instrList:il instr:i
+                {: il.addLast(i);
+                   RESULT = il;
+                :}
+                | /* epsilon */
+                {: RESULT = new LinkedList<InstrNode>();
+                :}
+                ;
+
+instr           ::= ADD:func REG:rd REG:rs REG:rt
+				{: RESULT = new AriLog(func.linenum, func.charnum,
+									   "0",(int)Integer.valueOf(rd.Index,16), 
+										   (int)Integer.valueOf(rs.Index,16),
+										   (int)Integer.valueOf(rt.Index,16));
+                :}
+				| SUB:func REG:rd REG:rs REG:rt
+				{: RESULT = new AriLog(func.linenum, func.charnum,
+									   "1",(int)Integer.valueOf(rd.Index,16), 
+										   (int)Integer.valueOf(rs.Index,16),
+										   (int)Integer.valueOf(rt.Index,16));
+                :}
+				| XOR:func REG:rd REG:rs REG:rt
+				{: RESULT = new AriLog(func.linenum, func.charnum,
+									   "2",(int)Integer.valueOf(rd.Index,16), 
+										   (int)Integer.valueOf(rs.Index,16),
+										   (int)Integer.valueOf(rt.Index,16));
+                :}
+				| LD:func REG:rd REG:rs
+				{: RESULT = new LdSw(func.linenum, func.charnum,
+								 	 "3",(int)Integer.valueOf(rd.Index,16), 
+										 (int)Integer.valueOf(rs.Index,16));
+                :}
+				| SW:func REG:rd REG:rs
+				{: RESULT = new LdSw(func.linenum, func.charnum,
+								     "4",(int)Integer.valueOf(rd.Index,16), 
+										 (int)Integer.valueOf(rs.Index,16));
+                :}
+				| LH:func REG:rd INT:imme
+				{: int Imme = 0;
+				   if (imme.Index.substring(0,2).equals("0x")) { // HEX
+					   Imme = Integer.valueOf(imme.Index.substring(2), 16);
+				   }
+				   else { //DEC
+					   Imme = Integer.valueOf(imme.Index, 10);
+				   }
+				   if (Imme > 255) {
+					   System.err.println(imme.linenum+ ":"+imme.charnum+ " The integer is too large.");
+					   System.exit(-1);
+				   }
+				   RESULT = new LdImme(func.linenum, func.charnum, "5", (int)Integer.valueOf(rd.Index,16), Imme);
+				:}
+				| LL:func REG:rd INT:imme
+				{: int Imme = 0;
+				   if (imme.Index.substring(0,2).equals("0x")) { // HEX
+					   Imme = Integer.valueOf(imme.Index.substring(2), 16);
+				   }
+				   else { //DEC
+					   Imme = Integer.valueOf(imme.Index, 10);
+				   }
+				   if (Imme > 255) {
+					   System.err.println(imme.linenum+ ":"+imme.charnum+ " The integer is too large.");
+					   System.exit(-1);
+				   }
+				   RESULT = new LdImme(func.linenum, func.charnum, "6", (int)Integer.valueOf(rd.Index,16), Imme);
+				:}
+				| SHIFT:func REG:rd SHIFTMODE:m INT:imme
+				{: int Imme = 0;
+				   if (imme.Index.length() > 2 && imme.Index.substring(0,2).equals("0x")) { // HEX
+					   Imme = Integer.valueOf(imme.Index.substring(2), 16);
+				   }
+				   else { //DEC
+					   Imme = Integer.valueOf(imme.Index, 10);
+				   }
+				   if (Imme > 15) {
+					   System.err.println(imme.linenum+ ":"+imme.charnum+ " The integer is too large.");
+					   System.exit(-1);
+				   }
+				   RESULT = new Shift(func.linenum, func.charnum, 
+				   					  (int)Integer.valueOf(rd.Index,16), 
+									  (int)Integer.valueOf(m.Index,10),Imme);
+				:}
+				| BRANCH:func COND:c INT:imme
+				{: int Imme = 0;
+				   if (imme.Index.length() > 2 && imme.Index.substring(0,2).equals("0x")) { // HEX
+					  Imme = Integer.valueOf(imme.Index.substring(2), 16);
+				   }
+				   else { //DEC
+					   Imme = Integer.valueOf(imme.Index, 10);
+				   }
+				   if (Imme > 511) {
+						   System.err.println(imme.linenum+ ":"+imme.charnum+ " The integer is too large.");
+						   System.exit(-1);
+				   }
+				   RESULT = new Branch(func.linenum, func.charnum, (int)Integer.valueOf(c.Index, 10), Imme);
+				:}
+				| BRANCH:func COND:c STR:s
+				{: RESULT = new Branch(func.linenum, func.charnum, (int)Integer.valueOf(c.Index, 10), s.Index);
+				:}
+				| JLINK:func INT:imme
+				{: int Imme = 0;
+				   if (imme.Index.length() > 2 && imme.Index.substring(0,2).equals("0x")) { // HEX
+					  Imme = Integer.valueOf(imme.Index.substring(2), 16);
+				   }
+				   else { //DEC
+					   Imme = Integer.valueOf(imme.Index, 10);
+				   }
+				   if (Imme > 4095) {
+						   System.err.println(imme.linenum+ ":"+imme.charnum+ " The integer is too large.");
+						   System.exit(-1);
+				   }
+				   RESULT = new JLink(func.linenum, func.charnum, Imme);
+				:}
+				| JLINK:func STR:s
+				{: RESULT = new JLink(func.linenum, func.charnum, s.Index);
+				:}
+				| FLAG:f
+				{: RESULT = new Flag(f.linenum, f.charnum, f.Index);
+				:}
+				|JREG:func REG:r
+				{: RESULT = new JReg(func.linenum, func.charnum, (int)Integer.valueOf(r.Index, 16));
+				:}
+				|JREG:func REG:r SETMODE:s
+				{: RESULT = new JReg(func.linenum, func.charnum,
+								     (int)Integer.valueOf(r.Index, 16),
+									 (int)Integer.valueOf(s.Index, 10));
+				:}
+				|SEND:func INT:imme
+				{: int Imme = 0;
+				   if (imme.Index.length() > 2 && imme.Index.substring(0,2).equals("0x")) { // HEX
+					  Imme = Integer.valueOf(imme.Index.substring(2), 16);
+				   }
+				   else { //DEC
+					   Imme = Integer.valueOf(imme.Index, 10);
+				   }
+				   if (Imme > 255) {
+						   System.err.println(imme.linenum+ ":"+imme.charnum+ " The integer is too large.");
+						   System.exit(-1);
+				   }
+				   RESULT = new Send(func.linenum, func.charnum, Imme);
+				:}
+				|SEND:func REG:r SENDMODE:s
+				{: RESULT = new Send(func.linenum, func.charnum, 
+									 (int)Integer.valueOf(r.Index, 16), 
+									 (int)Integer.valueOf(s.Index, 10));
+				:}
+				|SET:func SETMODE:s
+				{: RESULT = new Set(func.linenum, func.charnum, (int)Integer.valueOf(s.Index, 10));
+				:}
+                ;

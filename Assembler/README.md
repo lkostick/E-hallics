@@ -2,6 +2,8 @@ Assembler
 =========================
 Support by jlex and java cup
 
+Works on CS lab linux machine. If using it on other machine, please modify the  CP variable in Makefile.
+
 Instruction syntax:
   1. Different areas should be seperated by comma, space or tab
   2. Register should be a letter R(or r) follow a hex number, like  R1, Ra, rf

@@ -1,7 +1,3 @@
-/**********************************************************************
- Java CUP specification for a parser for C-- programs
- **********************************************************************/
-
 import java_cup.runtime.*;
 import java.util.*;
 
@@ -28,7 +24,7 @@ public void syntax_error(Symbol currToken) {
 terminal TokenVal       ADD, SUB, XOR, LD, SW, LH, LL, SHIFT,
 						BRANCH, JLINK, JREG, CTRL, SEND, SET, 
 						RECV, REG, INT, SHIFTMODE, COND, STR, FLAG,
-						SETMODE, SENDMODE;
+						SETMODE, SENDMODE, ADDR;
 
 
 /* Nonterminals
@@ -175,7 +171,7 @@ instr           ::= ADD:func REG:rd REG:rs REG:rt
 								     (int)Integer.valueOf(r.Index, 16),
 									 (int)Integer.valueOf(s.Index, 10));
 				:}
-				|SEND:func INT:imme
+				| SEND:func INT:imme
 				{: int Imme = 0;
 				   if (imme.Index.length() > 2 && imme.Index.substring(0,2).equals("0x")) { // HEX
 					  Imme = Integer.valueOf(imme.Index.substring(2), 16);
@@ -184,17 +180,20 @@ instr           ::= ADD:func REG:rd REG:rs REG:rt
 					   Imme = Integer.valueOf(imme.Index, 10);
 				   }
 				   if (Imme > 255) {
-						   System.err.println(imme.linenum+ ":"+imme.charnum+ " The integer is too large.");
-						   System.exit(-1);
+				       System.err.println(imme.linenum+ ":"+imme.charnum+ " The integer is too large.");
+				       System.exit(-1);
 				   }
 				   RESULT = new Send(func.linenum, func.charnum, Imme);
 				:}
-				|SEND:func REG:r SENDMODE:s
+				| SEND:func REG:r SENDMODE:s
 				{: RESULT = new Send(func.linenum, func.charnum, 
 									 (int)Integer.valueOf(r.Index, 16), 
 									 (int)Integer.valueOf(s.Index, 10));
 				:}
-				|SET:func SETMODE:s
+				| SET:func SETMODE:s
 				{: RESULT = new Set(func.linenum, func.charnum, (int)Integer.valueOf(s.Index, 10));
+				:}
+				| ADDR:a
+				{: RESULT = new Addr(a.linenum, a.charnum, (int)Integer.valueOf(a.Index, 16));
 				:}
                 ;

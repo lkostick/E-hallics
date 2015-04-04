@@ -200,17 +200,40 @@ return new Symbol(sym.EOF);
 		 }
 
 
-({LETTER}|{DIGIT})+ 
+({LETTER}|{DIGIT}|_)+ 
 		  { // String
 			CharNum.num += yytext().length();
 			return new Symbol(sym.STR, new TokenVal(yyline + 1, CharNum.num - yytext().length(), yytext()));
 		  }
 
-({LETTER}|{DIGIT})+: 
+({LETTER}|{DIGIT}|_)+: 
 		  {// Flag
 			CharNum.num += yytext().length();
 			return new Symbol(sym.FLAG, new TokenVal(yyline + 1, CharNum.num - yytext().length(),
 													 yytext().substring(0, yytext().length()-1)));
+		  }
+
+@{HEX}{HEX}{HEX}{HEX} 
+		  { // Address
+			CharNum.num += 5;
+			return new Symbol(sym.ADDR, new TokenVal(yyline + 1, CharNum.num - 5, yytext().substring(1)));
+		  }
+
+\'[^\n]\' { // Send data
+			CharNum.num += 3;
+			String data = String.valueOf(((int)yytext().charAt(1)));
+			return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num - 3, data));
+		  }
+
+\'\\[nt]\'
+		  { // Send data, escaped characters
+			CharNum.num += 4;
+			String data= null;
+			if (yytext().charAt(2) == 'n')
+				data = "0x0D";
+			else
+				data = "0x09";
+			return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num - 4, data));
 		  }
 
 (//|#)[^\n]*

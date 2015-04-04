@@ -15,7 +15,7 @@ Instruction format:
 	9. B <Cond> <Imme or Flag>
 	10. JL <Imme or Flag>
 	11. JR <Rd> <Set_Mode> or JR <Rd>
-	12. Send <Rd> <Send_Mode>
+	12. Send <Rd> <Send_Mode> or Send <Imme> or Send <Char>
 	13. Set <Set_Mode>
 
 \<Set_Mode> : idle, user, previous.
@@ -29,6 +29,8 @@ Instruction format:
 \<Imme> : Decimal or hex number, hex number should start with 0x
 
 \<Flag> : Can be any combination of letter and\or digit except reserved word
+
+\<Char> : One char enclosed by single quote. Support two escaped characters, '\t' and '\n'
 
 Letters in instruction: Can be capital or lower-case letter, like add or ADD, eq or EQ
 
@@ -52,4 +54,8 @@ Example:
 	FLAG2: send ra low
 	send ra high
 	send 0x45
+	send 'a'
+	send ' ' //send space
+	send '\n' //new line
+	send '\t'
 	Set previous

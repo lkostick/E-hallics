@@ -1,4 +1,4 @@
-module Monitor(input clk, rst, miss, jump, input [15:0] new_PC, branch_PC, input [1:0] Mode_Set, output reg [15:0] J_R, output reg J, output reg [1:0] Mode, input Bad_Instr, input Illegal_PC, input Illegal_Memory, output reg Store_Current);
+module Monitor(input clk, rst, miss, jump, input [15:0] new_PC, branch_PC, input [1:0] Mode_Set, output reg [15:0] J_R, output reg J, output reg [1:0] Mode, input Bad_Instr_in, input Illegal_PC_in, input Illegal_Memory_in, output reg Store_Current);
 
 localparam Illegal_PC_Handler = 16'h0000;
 localparam Illegal_Register_Access_Handler = 16'h0000;
@@ -12,15 +12,15 @@ always @(posedge clk, posedge rst) begin
 		illegal_memory <= 0;
 	end
 	else begin
-		bad_instr <= Bad_Instr;
-		illegal_pc <= Illegal_PC;
-		illegal_memory <= Illegal_Memory;
+		bad_instr <= Bad_Instr_in;
+		illegal_pc <= Illegal_PC_in;
+		illegal_memory <= Illegal_Memory_in;
 	end
 end
 always @(posedge clk, posedge rst) begin
 	if (rst) 
-		Mode <= 2'b01;
-	else if (Bad_Instr|Illegal_PC| Illegal_Memory) 
+		Mode <= 2'b11;
+	else if (Bad_Instr_in|Illegal_PC_in| Illegal_Memory_in) 
 		Mode <= {1'b1, Mode[0]};
 	else
 		case (Mode_Set)

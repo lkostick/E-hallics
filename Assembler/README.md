@@ -9,8 +9,8 @@ Instruction format:
 	3. Xor <Rd> <Rs> <Rt>
 	4. Ld <Rd> <Rs>
 	5. Sw <Rd> <Rs>
-	6. Lh <Rd> <Imme>
-	7. Ll <Rd> <Imme>
+	6. Lh <Rd> <Imme> or Lh <Rd> <Char>
+	7. Ll <Rd> <Imme> or Ll <Rd> <Char>
 	8. Shift <Rd> <Shift_Mode> <Imme>
 	9. B <Cond> <Imme or Flag>
 	10. JL <Imme or Flag>

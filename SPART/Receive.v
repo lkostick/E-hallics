@@ -72,7 +72,7 @@ module Receive(output reg [7:0] DATA, output reg RDA, input RxD, Enable, clk, rs
 	always @(posedge clk, posedge rst)
 		if (rst)
 			RDA <= 0;
-		else if ( {Signal_C,Counter} == 8'h80 ) //Finish receiving data
+		else if ( RDA == 0 && {Signal_C,Counter} == 8'h80 ) //Finish receiving data
 			RDA <= 1;
 		else if ({IORW,IOADDR} == 3'b100) // Driver have read the data
 			RDA <= 0;

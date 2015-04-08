@@ -193,6 +193,13 @@ instr           ::= ADD:func REG:rd REG:rs REG:rt
 				| SET:func SETMODE:s
 				{: RESULT = new Set(func.linenum, func.charnum, (int)Integer.valueOf(s.Index, 10));
 				:}
+				| RECV:func REG:rd INT:device INT:addr
+				{: int Device = Integer.valueOf(device.Index, 10);
+				   int Addr = Integer.valueOf(addr.Index, 10);
+				   RESULT = new Rv(func.linenum, func.charnum, 
+						   			(int)Integer.valueOf(rd.Index, 16),
+									Device, Addr);
+				:}
 				| ADDR:a
 				{: RESULT = new Addr(a.linenum, a.charnum, (int)Integer.valueOf(a.Index, 16));
 				:}

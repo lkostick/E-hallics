@@ -199,6 +199,11 @@ return new Symbol(sym.EOF);
 		   return new Symbol(sym.SENDMODE, new TokenVal(yyline + 1,CharNum.num - 4, "1"));
 		 }
 
+[Ss][Pp][Aa][Rr][Tt]
+		{ // Device selection;
+		  CharNum.num += 5;
+		  return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num -5, "0"));
+		}
 
 ({LETTER}|{DIGIT}|_)+ 
 		  { // String

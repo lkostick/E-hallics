@@ -4,7 +4,7 @@ import java.util.*;
 abstract class ASTnode {
 	abstract public void translate();
 }
-
+ 
 class ProgramNode extends ASTnode {
 	public ProgramNode(InstrListNode L) {
 		myInstrList = L;
@@ -29,42 +29,72 @@ class InstrListNode extends ASTnode {
 	public void translate() {
 		Iterator it = myInstrs.iterator();
 		try {
+			int n = 0;
 			while(it.hasNext()) {
-				((InstrNode)it.next()).translate();
+				InstrNode next = (InstrNode)it.next();
+				if (next.getAddr() != -1) {
+					if (next.getAddr() < n) {
+						System.err.println("Error");
+						System.exit(-1);
+					}
+					else {
+					for (int i =n; i<next.getAddr(); i++)
+						System.out.println("0000");
+					n = next.getAddr();
+					}
+				}
+				else {
+					n++;
+					next.translate();
+				}
 			}
+			for (int i = n ; i < 512; i++)
+				System.out.println("0000");
+
 		} catch (NoSuchElementException ex) {
 			System.err.println("Empty program");
 			System.exit(-1);
 		}
 	}
 
-	public void FlagCheck() {
-		int addr = 0;
+ 	public void FlagCheck() {
+		int index = 0, addr = 0;;
 		HashMap<String, Integer> Flags = new HashMap<String, Integer>();
-		while (addr < myInstrs.size()) {
-			InstrNode instr = myInstrs.get(addr);
-			if (instr.isFlag() != null) {
+ 		while (index < myInstrs.size()) {
+			InstrNode instr = myInstrs.get(index);
+ 			if (instr.isFlag() != null) {
 				if (Flags.containsKey(instr.isFlag())) {
 					System.err.println("Warning: Duplicated flags: "+instr.isFlag()+", ingore it. @"+instr.getLine()+":"+instr.getChar());
-				}
+ 				}
 				else
 					Flags.put(instr.isFlag(), addr);
-				myInstrs.remove(addr);
+				myInstrs.remove(index);
 			}
-			else
-				addr++;
+			else 
+			{
+				index++;
+				if (instr.getAddr() != -1) {
+					addr = instr.getAddr();
+				}
+				else addr++;
+			}
+
 		}
 		addr = 0;
-		for (InstrNode instr: myInstrs) {
-			if (instr.needFlag() != null) {
+ 		for (InstrNode instr: myInstrs) {
+ 			if (instr.needFlag() != null) {
 				if (!Flags.containsKey(instr.needFlag())) {
 					System.err.println("Error: flag: "+instr.needFlag() + " is not found. @"+instr.getLine()+":"+instr.getChar());
 					System.exit(-1);
-				}
+ 				}
 				if (!instr.SetImme(Flags.get(instr.needFlag()) - addr))
 					System.err.println(" @"+instr.getLine()+":"+instr.getChar());
 			}
-			addr++;
+			if (instr.getAddr() != -1){
+				addr = instr.getAddr();
+			}
+			else
+				addr++;
 		}
 	}
 	private List<InstrNode> myInstrs; 
@@ -75,7 +105,7 @@ abstract class InstrNode extends ASTnode {
 						   "a","b","c","d","e","f"};
 	public String isFlag(){
 		return null;
-	}
+ 	}
 
 	public String needFlag(){
 		return null;
@@ -91,8 +121,12 @@ abstract class InstrNode extends ASTnode {
 	public int getChar() {
 		return charnum;
 	}
+
+	public int getAddr() {
+		return -1;
+	}
 	protected int linenum, charnum;
-}
+} 
 
 class AriLog extends InstrNode {
 	public AriLog(int line, int Char, String func, int rd, int rs, int rt) {
@@ -325,10 +359,42 @@ class Set extends InstrNode {
 		this.mode = mode;
 		this.linenum = line;
 		this.charnum = Char;
-	}
+ 	}
 
-	public void translate() {
+ 	public void translate() {
 		System.out.println("d"+HEX[mode*4]+"00");
 	}
 	private int mode;
+}  
+class Rv extends InstrNode {
+	public Rv(int line, int Char, int rd, int device, int addr) {
+		this.linenum = line;
+		this.charnum = Char;
+		this.rd = rd;
+		this.device = device;
+		this.addr = addr;
+	}
+
+	public void translate() {
+		System.out.println("e"+HEX[rd]+HEX[device*4+addr/16]+HEX[addr % 16]);
+	}
+
+	private int rd, device, addr;
+}
+class Addr extends InstrNode {
+	public Addr(int line, int Char, int addr) {
+		this.linenum = line;
+		this.charnum = Char;
+		this.addr = addr;
+	}
+
+	public void translate() {
+		System.out.println("@"+HEX[addr/4096]+HEX[addr/256%16]+HEX[addr/16%16]+HEX[addr%16]);
+	}
+
+	public int getAddr() {
+		return addr;
+	}
+
+	private int addr;
 }

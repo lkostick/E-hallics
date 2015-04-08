@@ -1,7 +1,13 @@
 // IF stage MUX
-module Instr_MUX(input i_hit, jump, Mode, input[15:0] instr_i, output reg [15:0] instr_o);
+module Instr_MUX(input clk, rst, i_hit, jump, Mode, input[15:0] instr_i, output reg [15:0] instr_o);
+	reg counter;
+	always @(posedge clk, posedge rst)
+		if(rst)
+			counter <= 0;
+		else
+			counter <= jump;
 	always @(*)
-		if (~i_hit|jump|~Mode)
+		if (~i_hit|jump|~Mode|counter)
 			instr_o = 16'h0000;
 		else
 			instr_o = instr_i;
@@ -34,13 +40,15 @@ always @(*)
 		J_R = imme;
 endmodule
 
-module Source_MUX(input[1:0] sel, input [15:0] JL_PC, input[15:0] alu, output reg [15:0] data);
+module Source_MUX(input[1:0] sel, input [15:0] JL_PC, input[15:0] alu, input [15:0] spart, output reg [15:0] data);
 always @(*)
 	case (sel)
 		2'b00:
 			data = alu;
 		2'b01:
 			data = JL_PC;
+		2'b10:
+			data = spart;
 		default:
 			data = alu;
 	endcase

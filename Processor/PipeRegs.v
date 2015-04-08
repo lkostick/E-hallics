@@ -20,7 +20,7 @@ module IF_ID(clk, rst, stall, instr_in, instr_out, PC_in, PC_out);
 	end
 endmodule
 
-module ID_EX(clk, rst, stall, flush, full, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_addr_in, dst_addr_out, Updateflag_in, Updateflag_out, p0_in, p0_out, p1_in, p1_out, condition_in, condition_out, taken_in, taken_out, branch_PC_in, branch_PC_out, source_sel_in, source_sel_out, Mem_re_in, Mem_re_out, Mem_we_in, Mem_we_out, Mem_sel_in, Mem_sel_out, p0_addr_in, p0_addr_out, p1_addr_in, p1_addr_out, Mode_in, Mode_out, send_sel_in, send_sel_out, send_in, send_out);
+module ID_EX(clk, rst, stall, flush, full, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_addr_in, dst_addr_out, Updateflag_in, Updateflag_out, p0_in, p0_out, p1_in, p1_out, condition_in, condition_out, taken_in, taken_out, branch_PC_in, branch_PC_out, source_sel_in, source_sel_out, Mem_re_in, Mem_re_out, Mem_we_in, Mem_we_out, Mem_sel_in, Mem_sel_out, p0_addr_in, p0_addr_out, p1_addr_in, p1_addr_out, Mode_in, Mode_out, send_sel_in, send_sel_out, send_in, send_out, spart_addr_in, spart_addr_out);
 
 	input clk, rst, we_in, stall, flush, full;
 	input [3:0] dst_addr_in;
@@ -48,6 +48,8 @@ module ID_EX(clk, rst, stall, flush, full, Alu_Op_in, Alu_Op_out, we_in, we_out,
 	output reg [1:0] Mode_out;
 	input send_sel_in, send_in;
 	output reg send_sel_out, send_out;
+	input [2:0] spart_addr_in;
+	output reg [2:0] spart_addr_out;
 
 	always @(posedge clk, posedge rst) begin
 		if (rst) begin
@@ -69,6 +71,7 @@ module ID_EX(clk, rst, stall, flush, full, Alu_Op_in, Alu_Op_out, we_in, we_out,
 			send_sel_out <= 0;
 			send_out <= 0;
 			Mode_out <= 0;
+			spart_addr_out <= 0;
 		end
 		else if (flush) begin
 			Alu_Op_out <= 0;
@@ -89,6 +92,7 @@ module ID_EX(clk, rst, stall, flush, full, Alu_Op_in, Alu_Op_out, we_in, we_out,
 			send_sel_out <= 0;
 			send_out <= 0;
 			Mode_out <= Mode_in;
+			spart_addr_out <= 0;
 		end
 		else if (stall) begin
 			Alu_Op_out <= Alu_Op_out;
@@ -109,6 +113,7 @@ module ID_EX(clk, rst, stall, flush, full, Alu_Op_in, Alu_Op_out, we_in, we_out,
 			send_sel_out <= send_sel_out;
 			send_out <= send_out & full;
 			Mode_out <= Mode_in;
+			spart_addr_out <= spart_addr_out;
 		end
 		else begin
 			Alu_Op_out <= Alu_Op_in;
@@ -129,6 +134,7 @@ module ID_EX(clk, rst, stall, flush, full, Alu_Op_in, Alu_Op_out, we_in, we_out,
 			send_sel_out<= send_sel_in;
 			send_out <= send_in;
 			Mode_out <= Mode_in;
+			spart_addr_out <= spart_addr_in;
 		end
 	end
 endmodule

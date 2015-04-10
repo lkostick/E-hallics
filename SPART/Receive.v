@@ -80,6 +80,6 @@ module Receive(output reg [7:0] DATA, output reg RDA, input RxD, Enable, clk, rs
 			RDA <= RDA;
 
 	always @(*)
-		DATA = Receive_Buffer[7:0];	
+		DATA = Receive_Buffer[7:0];
 
 endmodule //Receive

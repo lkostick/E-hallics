@@ -1,7 +1,7 @@
 module Monitor(input clk, rst, miss, jump, input [15:0] new_PC, branch_PC, input [1:0] Mode_Set, output reg [15:0] J_R, output reg J, output reg [1:0] Mode, input Bad_Instr_in, input Illegal_PC_in, input Illegal_Memory_in, input Spart_RCV_in, output reg Store_Current);
 
 localparam Illegal_PC_Handler = 16'h0000;
-localparam Illegal_Register_Access_Handler = 16'h0000;
+localparam Illegal_Register_Access_Handler = 16'h0060;
 localparam Illegal_Memory_Access_Handler = 16'h0100;
 localparam Spart_Handler = 16'h0030;
 
@@ -18,7 +18,7 @@ always @(posedge clk, posedge rst) begin
 		bad_instr <= Bad_Instr_in;
 		illegal_pc <= Illegal_PC_in;
 		illegal_memory <= Illegal_Memory_in;
-		spart_rcv <= Spart_RCV_in & ~Mode[1];
+		spart_rcv <= (Spart_RCV_in & (~Mode[1]));
 	end
 end
 

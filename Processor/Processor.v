@@ -18,9 +18,9 @@ module Processor(clk, rst, i_hit, instr, i_addr, d_hit, d_addr, Mem_re, Mem_we, 
 
 	// IF
 	PC iPC(.clk(clk), .rst(rst), .i_hit(i_hit), .jump(J), .stall(PC_stall), .Mode(|Mode), .J_R(J_R), .PC(i_addr));
-	Instr_MUX iMUX1(.clk(clk), .rst(rst), .i_hit(i_hit), .jump(J), .Mode(|Mode), .instr_i(instr), .instr_o(instr_out));
+	Instr_MUX iMUX1(.i_hit(i_hit), .jump(J), .Mode(|Mode), .instr_i(instr), .instr_o(instr_out));
 
-	IF_ID iREG1(.clk(clk), .rst(rst), .stall(IFID_stall), .instr_in(instr_out), .instr_out(instr_IFID_out), .PC_in(i_addr - 1'b1), .PC_out(PC_out));
+	IF_ID iREG1(.clk(clk), .rst(rst), .stall(IFID_stall), .instr_in(instr_out), .instr_out(instr_IFID_out), .PC_in(i_addr), .PC_out(PC_out));
 
 	// ID
 	

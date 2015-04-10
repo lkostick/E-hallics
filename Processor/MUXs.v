@@ -1,13 +1,7 @@
 // IF stage MUX
-module Instr_MUX(input clk, rst, i_hit, jump, Mode, input[15:0] instr_i, output reg [15:0] instr_o);
-	reg counter;
-	always @(posedge clk, posedge rst)
-		if(rst)
-			counter <= 0;
-		else
-			counter <= jump;
+module Instr_MUX(input i_hit, jump, Mode, input[15:0] instr_i, output reg [15:0] instr_o);
 	always @(*)
-		if (~i_hit|jump|~Mode|counter)
+		if (~i_hit|jump|~Mode)
 			instr_o = 16'h0000;
 		else
 			instr_o = instr_i;

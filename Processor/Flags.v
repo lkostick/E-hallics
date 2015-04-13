@@ -1,4 +1,4 @@
-module Flags(input clk, rst, Z, OV, N, input[1:0] Mode, input [1:0] Update, output reg z_out, ov_out, n_out);
+module Flags(input clk, Z, OV, N, input[1:0] Mode, input [1:0] Update, output reg z_out, ov_out, n_out);
 
 //two sets of flags, one used in interruption handler and one used in user
 //mode
@@ -7,16 +7,8 @@ module Flags(input clk, rst, Z, OV, N, input[1:0] Mode, input [1:0] Update, outp
 reg Z_I, O_I, N_I, Z_U, O_U, N_U;
 
 // update flags
-	always @(posedge clk, posedge rst) begin
-		if (rst) begin
-			Z_I <= 0;
-			O_I <= 0;
-			N_I <= 0;
-			Z_U <= 0;
-			O_U <= 0;
-			N_U <= 0;
-		end
-		else if (~|Mode) begin
+	always @(posedge clk) begin
+		if (~|Mode) begin
 			Z_I <= 0;
 			O_I <= 0;
 			N_I <= 0;
@@ -44,12 +36,7 @@ reg Z_I, O_I, N_I, Z_U, O_U, N_U;
 
 // Output flags
 always @(*) begin
-	if (rst| ~|Mode) begin
-		z_out = 0;
-		ov_out = 0;
-		n_out = 0;
-	end
-	else if (Mode == 2'b01) begin
+	if (Mode == 2'b01) begin
 		z_out = Z_U;
 		ov_out = O_U;
 		n_out = N_U;

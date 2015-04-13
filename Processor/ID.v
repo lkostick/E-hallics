@@ -1,4 +1,4 @@
-module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, Mem_sel, output reg [1:0] Mode_Set, input [1:0] Mode, output reg Bad_Instr, input Store_Current, output reg send_sel, output reg send, output reg [2:0] spart_addr);
+module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, Mem_sel, output reg [1:0] Mode_Set, input [1:0] Mode, output reg Bad_Instr, output reg send_sel, output reg send, output reg [2:0] spart_addr);
 
 // Opcode of instruction
 localparam ADD = 4'h0;
@@ -45,19 +45,9 @@ always @(*) begin
 		ADD: begin
 			p0_addr = instr[7:4];
 			p1_addr = instr[3:0];
-			if (Store_Current) begin
-				dst_addr = 4'hf;
-				we =1;
-				branch_PC = i_addr;
-				source_sel = 2'b01;
-			end
-			else begin
-				dst_addr = instr[11:8];
-				we = |instr[11:8];
-				branch_PC = 16'hxxxx;
-				source_sel = 2'b00;
-			end
-			Updateflag = {|instr[11:8],|instr[11:8]};
+			dst_addr = instr[11:8];
+			we = |instr[11:8];
+			Updateflag = {2{|instr[11:8]}};
 		end
 		SUB: begin
 			p0_addr = instr[7:4];
@@ -65,7 +55,7 @@ always @(*) begin
 			dst_addr = instr[11:8];
 			we = |instr[11:8];
 			Alu_Op = 3'h1;
-			Updateflag = {|instr[11:8],|instr[11:8]};
+			Updateflag = {2{|instr[11:8]}};
 		end
 		XOR: begin
 			p0_addr = instr[7:4];

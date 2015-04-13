@@ -1,9 +1,13 @@
 #include <windows.h>
 #include <iostream>
+#include <string>
 using namespace std;
 
 int flag = 0;
 char pc[4];
+int addr;
+int data[4];
+char store_data;
 DWORD WINAPI SerialCOMMREAD(LPVOID lpParam);
 
 int main()
@@ -12,11 +16,109 @@ int main()
 	HANDLE hThread;
 
 	hThread = CreateThread(NULL, 0, SerialCOMMREAD, NULL, 0, &dwThreadID);
-
+	string command;
+	char filename[1024];
+	int error;
 	while (1) // read data from cin
 	{
-		cin >> pc[0] >> pc[1] >> pc[2] >> pc[3];
-		flag = 1;
+		cin >> command; 
+		if (command.compare("set") == 0) {
+			error = 0;
+			for (int i = 0; i < 4; i++){
+				cin >> pc[i];
+				if (pc[i]<48 || (pc[i] >57 && pc[i] <'A') || (pc[i] >'F' &&pc[i] <'a') || (pc[i] >'f')) {
+					cerr << "Unexpected PC" << endl;
+					cin.clear();
+					cin.ignore(1000, '\n');
+					error = 1;
+					break;
+				}
+			}
+			flag = 1-error;
+		}
+		else if (command.compare("load") == 0){
+			cin >> filename;
+			HANDLE program = CreateFile(TEXT(filename), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (program == INVALID_HANDLE_VALUE) {
+				cerr << "Can not open file: " << filename << endl;
+			}
+			else {
+				char byte ;
+				DWORD read= 1;
+				addr = 0;
+				while (read == 1) {
+					if (flag == 0) {
+						ReadFile(program, &byte, 1, &read, 0);
+						if (byte != 10) {
+							if (byte == '@')
+							for (int i = 0; i < 4; i++) {
+								ReadFile(program, &byte, 1, &read, 0);
+								addr += ((byte <= '9') ? byte - '0' : (byte < 'a') ? byte - 'A' + 10 : byte - 'a' + 10);
+								if (i != 3) addr *= 16;
+							}
+							else {
+								for (int i = 0; i < 4; i++) {
+									data[i] = (byte <= '9') ? byte - '0' : (byte < 'a') ? byte - 'A' + 10 : byte - 'a' + 10;
+									ReadFile(program, &byte, 1, &read, 0);
+								}
+								flag = 2;
+							}
+						}
+					}
+					Sleep(1);
+				}
+				CloseHandle(program);
+			}
+		}
+		else if (command.compare("get") == 0) {
+			error = 0;
+			for (int i = 0; i < 4; i++) {
+				cin >> pc[i];
+				if (pc[i]<48 || (pc[i] >57 && pc[i] <'A') || (pc[i] >'F' &&pc[i] <'a') || (pc[i] >'f')) {
+					cerr << "Unexpected memory address" << endl;
+					cin.clear();
+					cin.ignore(1000, '\n');
+					error = 1;
+					break;
+				}
+			}
+			if (error == 0) flag = 3;
+		}
+		else if (command.compare("store") == 0) {
+			error = 0;
+			for (int i = 0; i < 4; i++) {
+				cin >> pc[i];
+				if (pc[i]<48 || (pc[i] >57 && pc[i] <'A') || (pc[i] >'F' &&pc[i] <'a') || (pc[i] >'f')) {
+					cerr << "Unexpected memory address" << endl;
+					cin.clear();
+					cin.ignore(1000, '\n');
+					error = 1;
+					break;
+				}
+				addr += ((pc[i] <= '9') ? pc[i] - '0' : (pc[i] < 'a') ? pc[i] - 'A' + 10 : pc[i] - 'a' + 10);
+				if (i != 3) addr *= 16;
+			}
+			if (error == 0) {
+				for (int i = 0; i < 4; i++) {
+					cin >> store_data;
+					if (store_data<48 || (store_data >57 && store_data <'A') || (store_data >'F' && store_data <'a') || (store_data >'f')) {
+						cerr << "Unexpected data" << endl;
+						cin.clear();
+						cin.ignore(1000, '\n');
+						error = 1;
+						break;
+					}
+					data[i] = (store_data <= '9') ? store_data - '0' : (store_data < 'a') ? store_data - 'A' + 10 : store_data - 'a' + 10;
+				}
+			}
+			if (error == 0)
+				flag = 2;
+		}
+		else {
+			cerr << "Unknown command" << endl;
+			cin.clear();
+			cin.ignore(1000, '\n');
+		}
 	}
 	WaitForSingleObject(hThread, INFINITE);
 	return 0;
@@ -80,6 +182,8 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 	}
 
 	char byte,bytes;
+	int reg_flag = 1, trans;
+	char HEX[16] ={'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 	DWORD dwBytesTransferred, byteWritten;
 	SetCommMask(hSerial, EV_RXCHAR | EV_CTS | EV_DSR | EV_RLSD | EV_RING);
 	while (1)
@@ -88,45 +192,119 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 		{
 			ReadFile(hSerial, &byte, 1, &dwBytesTransferred, 0);
 			if (dwBytesTransferred == 1)
-			if ((int)byte == 13)
-				cout << endl;
-			else cout << byte;
+			{
+				if ((int)byte == -1)
+					reg_flag = -reg_flag;
+				else if(reg_flag ==1) {
+					if ((int)byte == 13)
+						cout << endl;
+					else cout << byte;
+				}
+				else
+				{
+					if ((int)byte < 0)
+						trans = (int)byte + 256;
+					else
+						trans = (int)byte;
+					cout << HEX[trans / 16] << HEX[trans % 16];
+				}
+			}
 		}
 		if (flag == 1)
 		{
-			flag = 0;
 			for (int i = 0; i < 6; i++)
 			{
-				if (i == 0)
-					bytes = 5;
-				else if (i == 1)
-					bytes = 17;
-				else {
-					if (pc[i - 2] <= '9' && pc[i - 2] >= '0')
-						bytes = i * 16 + pc[i - 2] - '0';
-					else
-						switch (pc[i - 2]) {
-						case 'a':
-						case 'A': bytes = i * 16 + 10;
-							break;
-						case 'b':
-						case 'B': bytes = i * 16 + 11;
-							break;
-						case 'c':
-						case 'C': bytes = i * 16 + 12;
-							break;
-						case 'd':
-						case 'D': bytes = i * 16 + 13;
-							break;
-						case 'e':
-						case 'E': bytes = i * 16 + 14;
-							break;
-						case 'f':
-						case 'F': bytes = i * 16 + 15;
-							break;
-						default: cout << "Wrong address!" << endl;
-							return -1;
+				if (i == 0) bytes = 1;
+				else if (i == 5) bytes = 15 * 16;
+				else if (pc[i-1] <= '9' && pc[i-1] >= '0')
+					bytes = i * 16 + pc[i-1] - '0';
+				else
+					switch (pc[i-1]) {
+					case 'a':
+					case 'A': bytes = i * 16 + 10;
+						break;
+					case 'b':
+					case 'B': bytes = i * 16 + 11;
+						break;
+					case 'c':
+					case 'C': bytes = i * 16 + 12;
+						break;
+					case 'd':
+					case 'D': bytes = i * 16 + 13;
+						break;
+					case 'e':
+					case 'E': bytes = i * 16 + 14;
+						break;
+					case 'f':
+					case 'F': bytes = i * 16 + 15;
+						break;
+					default: cout << "Wrong address!" << endl;
 					}
+				if (!WriteFile(hSerial, &bytes, 1, &byteWritten, 0))
+				{
+					cerr << "Error in sending data" << endl;
+					CloseHandle(hSerial);
+					return -1;
+				}
+			}
+			flag = 0;
+			cout << "Set PC to 0x" << pc[0] << pc[1] << pc[2] << pc[3] << endl;
+		}
+		else if (flag == 2)
+		{
+			int hex_addr[4];
+			hex_addr[0] = addr / 16 / 16 / 16;
+			hex_addr[1] = addr / 16 / 16 % 16;
+			hex_addr[2] = addr / 16 % 16;
+			hex_addr[3] = addr % 16;
+			for (int i = 0; i <10; i++)
+			{
+				if (i == 0) bytes = 0;
+				else if (i < 5)
+					bytes = i * 16 + hex_addr[i - 1];
+				else if (i < 9)
+					bytes = i * 16 + data[i - 5];
+				else
+					bytes = 16 * 15;
+
+				if (!WriteFile(hSerial, &bytes, 1, &byteWritten, 0))
+				{
+					cerr << "Error in sending data" << endl;
+					CloseHandle(hSerial);
+					return -1;
+				}
+			}
+			addr += 1;
+			flag = 0;
+		}
+		else if (flag == 3) {
+			for (int i = 0; i < 6; i++)
+			{
+				if (i == 0) bytes = 2;
+				else if (i == 5) bytes = 15 * 16;
+				else if (pc[i - 1] <= '9' && pc[i - 1] >= '0')
+					bytes = i * 16 + pc[i - 1] - '0';
+				else
+					switch (pc[i - 1]) {
+					case 'a':
+					case 'A': bytes = i * 16 + 10;
+						break;
+					case 'b':
+					case 'B': bytes = i * 16 + 11;
+						break;
+					case 'c':
+					case 'C': bytes = i * 16 + 12;
+						break;
+					case 'd':
+					case 'D': bytes = i * 16 + 13;
+						break;
+					case 'e':
+					case 'E': bytes = i * 16 + 14;
+						break;
+					case 'f':
+					case 'F': bytes = i * 16 + 15;
+						break;
+					default: cout << "Wrong address!" << endl;
 				}
 				if (!WriteFile(hSerial, &bytes, 1, &byteWritten, 0))
 				{
@@ -135,8 +313,8 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 					return -1;
 				}
 			}
-			cout << "Set PC to 0x" << pc[0] << pc[1] << pc[2] << pc[3] << endl;
-		}	
+			flag = 0;
+		}
 	}
 	return 0;
 }

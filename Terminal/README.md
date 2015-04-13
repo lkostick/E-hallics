@@ -2,10 +2,10 @@ Terminal
 ===================
 Support commands:
 
-  1. set <PC>
-  2. load <filename>
-  3. store <Mem_addr> <data>
-  4. get <Mem_addr>
+  1. set \<PC>
+  2. load \<filename>
+  3. store \<Mem_addr> \<data>
+  4. get \<Mem_addr>
 
 Example:
 

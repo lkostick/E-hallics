@@ -19,20 +19,16 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 
-
-module BAUD_Rate_Gen( input clk, rst, output reg Enable);
+// Baud rate is fixed at 38400
+module BAUD_Rate_Gen( input clk, output reg Enable);
 
 	reg [7:0] Counter;
 
 	/**
 	* Count down and set enable signal.
 	*/
-	always @(posedge clk, posedge rst)
-		if ( rst ) begin
-			Counter <= 8'h00;
-			Enable <= 0;
-		end
-		else if (Counter == 8'h00) begin
+	always @(posedge clk)
+		if (Counter == 8'h00) begin
 			Counter <= 8'ha2;
 			Enable <= 1;
 		end

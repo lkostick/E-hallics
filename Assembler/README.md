@@ -1,8 +1,9 @@
 Assembler
 =========================
-Usage: java -jar asmbl.jar \<input file> \> \<output file>
+Usage: 
 
-Or java -jar asmbl.jar \<code_length> \<input file> \> \<output file>
+	1. java -jar asmbl.jar <input file> > <output file>
+	2. java -jar asmbl.jar <code_length> <input file> > <output file>
 
 When \<code_length> is provided, the unspecified address will be filled by 0x0000.
 
@@ -67,4 +68,5 @@ Example:
 	send ' ' //send space
 	send '\n' //new line
 	send '\t'
+	send "Program end\n"
 	Set previous

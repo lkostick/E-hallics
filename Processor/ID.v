@@ -40,6 +40,7 @@ always @(*) begin
 	send_sel = 0;
 	send = 0;
 	spart_addr = 3'h0;
+	Bad_Instr = 0;
 
 	case (instr[15:12])
 		ADD: begin
@@ -48,6 +49,10 @@ always @(*) begin
 			dst_addr = instr[11:8];
 			we = |instr[11:8];
 			Updateflag = {2{|instr[11:8]}};
+			if (Mode == 2'b01 && (instr[7:4] > 4'hc || instr[3:0] > 4'hc || instr[11:8] > 4'hc))
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		SUB: begin
 			p0_addr = instr[7:4];
@@ -56,6 +61,10 @@ always @(*) begin
 			we = |instr[11:8];
 			Alu_Op = 3'h1;
 			Updateflag = {2{|instr[11:8]}};
+			if (Mode == 2'b01 && (instr[7:4] > 4'hc || instr[3:0] > 4'hc || instr[11:8] > 4'hc))
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		XOR: begin
 			p0_addr = instr[7:4];
@@ -64,6 +73,10 @@ always @(*) begin
 			Alu_Op = 3'h2;
 			we = |instr[11:8];
 			Updateflag = {|instr[11:8],1'b0};
+			if (Mode == 2'b01 && (instr[7:4] > 4'hc || instr[3:0] > 4'hc || instr[11:8] > 4'hc))
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		SHIFT: begin
 			we = |instr[11:8];
@@ -76,6 +89,10 @@ always @(*) begin
 			endcase
 			Imme = {4'h0,instr[3:0]};
 			p1_sel = 1;
+			if (Mode == 2'b01 && instr[11:8] > 4'hc)
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		LLOW: begin
 			we = |instr[11:8];
@@ -83,6 +100,10 @@ always @(*) begin
 			p0_addr = instr[11:8];
 			Alu_Op = 3'h6;
 			p1_sel = 1;
+			if (Mode == 2'b01 && instr[11:8] > 4'hc)
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		LHIGH: begin
 			we = |instr[11:8];
@@ -90,6 +111,10 @@ always @(*) begin
 			p0_addr = instr[11:8];
 			Alu_Op = 3'h7;
 			p1_sel = 1;
+			if (Mode == 2'b01 && instr[11:8] > 4'hc)
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		BRANCH: begin
 			if (instr[11:9] == 3'h7) begin // unconditional
@@ -122,6 +147,10 @@ always @(*) begin
 				Mode_Set = instr[1:0];
 			else
 				Mode_Set = 2'b00;
+			if (Mode == 2'b01 && instr[11:8] > 4'hc)
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		JLINK: begin
 			jump = 1;
@@ -137,12 +166,20 @@ always @(*) begin
 			Mem_re = 1;
 			Mem_sel = 1;
 			we = |instr[11:8];
+			if (Mode == 2'b01 && (instr[7:4] > 4'hc || instr[11:8] > 4'hc))
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		STORE: begin
 			Mem_we = 1;
 			we = 0;
 			p0_addr = instr[7:4];
 			p1_addr = instr[11:8];
+			if (Mode == 2'b01 && (instr[7:4] > 4'hc || instr[11:8] > 4'hc))
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		SEND: begin
 			Imme = instr[11:4];
@@ -150,6 +187,10 @@ always @(*) begin
 			p1_sel = instr[1];
 			send_sel = instr[0];
 			send = 1;
+			if (Mode == 2'b01 && instr[11:8] > 4'hc && instr[1] == 0)
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		RECV: begin
 			dst_addr = instr[11:8];
@@ -164,6 +205,10 @@ always @(*) begin
 					spart_addr = 3'h0;
 				end
 			endcase
+			if (~Mode[1])
+				Bad_Instr = 1;
+			else
+				Bad_Instr = 0;
 		end
 		SET: begin
 			Mode_Set = instr[11:10];
@@ -172,17 +217,5 @@ always @(*) begin
 		default:
 			we = 0;
 	endcase
-end
-
-// Previlege Check
-always@(*) begin
-	if (Mode == 2'b01) begin
-		if (p0_addr > 4'hc || p1_addr > 4'hc || dst_addr > 4'hc || instr[15:12] == RECV)
-			Bad_Instr = 1;
-		else
-			Bad_Instr = 0;
-	end
-	else
-		Bad_Instr = 0;
 end
 endmodule

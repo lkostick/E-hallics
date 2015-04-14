@@ -5,7 +5,7 @@ module IF_ID(clk, rst, stall, instr_in, instr_out, PC_in, PC_out, jump_in, jump_
 	output reg[15:0] instr_out, PC_out;
 	output reg jump_out;
 	
-	always @(posedge clk, posedge rst) begin
+	always @(posedge clk) begin
 		if (rst) begin
 			PC_out <= 16'h0000;
 			instr_out <= 16'h0000;
@@ -55,7 +55,7 @@ module ID_EX(clk, rst, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out,
 	input [2:0] spart_addr_in;
 	output reg [2:0] spart_addr_out;
 
-	always @(posedge clk, posedge rst) begin
+	always @(posedge clk) begin
 		if (rst) begin
 			Alu_Op_out <= 0;
 			dst_addr_out <= 0;
@@ -176,7 +176,7 @@ module EX_MEM(clk, rst, stall, alu_in, alu_out, we_in, we_out, dst_addr_in, dst_
 	input [15:0] d_addr_in, wrt_data_in;
 	output reg [15:0] d_addr_out, wrt_data_out;
 
-	always @(posedge clk, posedge rst) begin
+	always @(posedge clk) begin
 		if (rst) begin
 			we_out <= 0;
 			dst_addr_out <=0;

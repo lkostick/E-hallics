@@ -14,7 +14,7 @@ always @(posedge clk) begin
 	spart_rcv <= (Spart_RCV_in & (~Mode[1]));
 end
 
-always @(posedge clk, posedge rst) begin
+always @(posedge clk) begin
 	if (rst) 
 		Mode <= 2'b11;
 	else if (Bad_Instr_in|Illegal_PC_in| Illegal_Memory_in |(Spart_RCV_in & ~Mode[1])) 

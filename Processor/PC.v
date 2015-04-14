@@ -3,7 +3,7 @@ module PC(input clk, rst, i_hit, jump, stall, Mode, input [15:0] J_R, output reg
 						  (~i_hit|stall|~Mode) ? PC:
 						  PC + 1;
 						  
-	always @(posedge clk, posedge rst)
+	always @(posedge clk)
 		if (rst)
 			PC <= 16'h0000;
 		else

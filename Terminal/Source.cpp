@@ -65,7 +65,7 @@ int main()
 							}
 						}
 					}
-					Sleep(1);
+					Sleep(5);
 				}
 				CloseHandle(program);
 			}
@@ -183,6 +183,7 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 
 	char byte,bytes;
 	int reg_flag = 1, trans;
+	int reg_count = 0;
 	char HEX[16] ={'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 	DWORD dwBytesTransferred, byteWritten;
 	SetCommMask(hSerial, EV_RXCHAR | EV_CTS | EV_DSR | EV_RLSD | EV_RING);
@@ -193,8 +194,10 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 			ReadFile(hSerial, &byte, 1, &dwBytesTransferred, 0);
 			if (dwBytesTransferred == 1)
 			{
-				if ((int)byte == -1)
+				if ((int)byte == -1 && reg_count == 0) {
 					reg_flag = -reg_flag;
+					if (reg_flag == -1) reg_count = 2;
+				}
 				else if(reg_flag ==1) {
 					if ((int)byte == 13)
 						cout << endl;
@@ -207,6 +210,7 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 					else
 						trans = (int)byte;
 					cout << HEX[trans / 16] << HEX[trans % 16];
+					reg_count--;
 				}
 			}
 		}

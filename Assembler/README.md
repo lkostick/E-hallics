@@ -23,6 +23,7 @@ Instruction format:
 	12. Send <Rd> <Send_Mode> or Send <Imme> or Send <Char> or Send <String>
 	13. Set <Set_Mode>
 	14. Rv <Rd> <Device> <Imme>
+	15. @<4-bit HEX>
 
 \<Set_Mode> : idle, user, previous.
 
@@ -65,6 +66,7 @@ Example:
 	send ra high
 	send 0x45
 	send 'a'
+	@0030
 	send ' ' //send space
 	send '\n' //new line
 	send '\t'

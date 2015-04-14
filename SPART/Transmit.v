@@ -4,7 +4,7 @@ module Transmit(output reg TxD, output reg TBR, input [7:0] DATA, input [1:0] IO
 	reg [3:0] Counter;
 	reg [3:0] Signal_C;
 	
-	always @(posedge clk, posedge rst)
+	always @(posedge clk)
 		if ( rst )
 			TxD <= 1;
 		else if ( {TBR, Enable, Signal_C} == 3'b010 )
@@ -25,7 +25,7 @@ module Transmit(output reg TxD, output reg TBR, input [7:0] DATA, input [1:0] IO
 		else 
 			Signal_C <= Signal_C;
 
-	always @(posedge clk, posedge rst)
+	always @(posedge clk)
 		if ( rst )
 			TBR <= 1;
 		// driver sends data to Transmit

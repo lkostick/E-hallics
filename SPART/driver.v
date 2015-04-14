@@ -7,7 +7,7 @@ module driver(input clk, input rst, output reg iorw, input rda, input tbr, outpu
 
 	assign databus = (iorw) ? 8'hzz : send_data;
 
-	FIFO iDUT(.clk(clk), .rst(rst), .din(data_in), .wr_en(send), .rd_en(rd_en), .dout(send_data), .full(full), .empty(empty));
+	FIFO iDUT(.clk(clk), .srst(rst), .din(data_in), .wr_en(send), .rd_en(rd_en), .dout(send_data), .full(full), .empty(empty));
 
 	always @(negedge clk)
 			rd_en <= ~(empty | rd_en | rda) & tbr;
@@ -29,10 +29,8 @@ module driver(input clk, input rst, output reg iorw, input rda, input tbr, outpu
 		else
 			data_buffer[databus[7:4]] <= data_buffer[databus[7:4]];
 		
-	always @(posedge clk, posedge rst)
-		if (rst)
-			RCV <= 0;
-		else if (rda & iorw)
+	always @(posedge clk)
+		if (rda & iorw)
 			RCV <= &databus[7:4];
 		else if (|addr)
 			RCV <=0;

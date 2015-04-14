@@ -240,6 +240,12 @@ return new Symbol(sym.EOF);
 				data = "0x09";
 			return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num - 4, data));
 		  }
+\"([^\n\\]|\\[\\nt\"\'])+\"
+		  { //  send data, string
+			CharNum.num += yytext().length();
+			return new Symbol(sym.STRING, new TokenVal(yyline + 1, CharNum.num - yytext().length(),
+							yytext().substring(1, yytext().length() - 1)));
+		  }
 
 (//|#)[^\n]*
  		  { // This is a comment, Ignore

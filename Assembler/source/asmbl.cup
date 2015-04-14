@@ -24,7 +24,7 @@ public void syntax_error(Symbol currToken) {
 terminal TokenVal       ADD, SUB, XOR, LD, SW, LH, LL, SHIFT,
 						BRANCH, JLINK, JREG, CTRL, SEND, SET, 
 						RECV, REG, INT, SHIFTMODE, COND, STR, FLAG,
-						SETMODE, SENDMODE, ADDR;
+						SETMODE, SENDMODE, ADDR, STRING;
 
 
 /* Nonterminals
@@ -84,7 +84,7 @@ instr           ::= ADD:func REG:rd REG:rs REG:rt
                 :}
 				| LH:func REG:rd INT:imme
 				{: int Imme = 0;
-				   if (imme.Index.substring(0,2).equals("0x")) { // HEX
+				   if (imme.Index.length() > 1 && imme.Index.substring(0,2).equals("0x")) { // HEX
 					   Imme = Integer.valueOf(imme.Index.substring(2), 16);
 				   }
 				   else { //DEC
@@ -98,7 +98,7 @@ instr           ::= ADD:func REG:rd REG:rs REG:rt
 				:}
 				| LL:func REG:rd INT:imme
 				{: int Imme = 0;
-				   if (imme.Index.substring(0,2).equals("0x")) { // HEX
+				   if (imme.Index.length() > 1 && imme.Index.substring(0,2).equals("0x")) { // HEX
 					   Imme = Integer.valueOf(imme.Index.substring(2), 16);
 				   }
 				   else { //DEC
@@ -189,6 +189,9 @@ instr           ::= ADD:func REG:rd REG:rs REG:rt
 				{: RESULT = new Send(func.linenum, func.charnum, 
 									 (int)Integer.valueOf(r.Index, 16), 
 									 (int)Integer.valueOf(s.Index, 10));
+				:}
+				| SEND:func STRING:s
+				{: RESULT = new Send(func.linenum, func.charnum, s.Index);
 				:}
 				| SET:func SETMODE:s
 				{: RESULT = new Set(func.linenum, func.charnum, (int)Integer.valueOf(s.Index, 10));

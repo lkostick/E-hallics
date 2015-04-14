@@ -5,15 +5,32 @@ import java_cup.runtime.*;  // defines Symbol
 public class asmbl {
     public static void main(String[] args) throws IOException {
 
-		if (args.length != 1) {
-			System.err.println("Usage: java asmbl <inputFile>");
+		FileReader inFile = null;
+		String flag = "0";
+		String filename = "";
+		if (args.length == 1) {
+			filename = args[0];
+		}
+		else if (args.length == 2) {
+			flag = args[0];
+			filename = args[1];
+			try {
+				Integer.valueOf(flag, 10);
+			} catch (NumberFormatException ex) {
+				System.err.println("<code_length> should be decimal number");
+				System.exit(-1);
+			}
+		}
+		else {
+			System.err.println("Usage: java asmbl.jar <code_length> <inputFile>");
+			System.err.println("Or     java asmbl.jar <inputFile>");
 			System.exit(-1);
 		}
-		FileReader inFile = null;
+
 		try {
-			inFile = new FileReader(args[0]);
+			inFile = new FileReader(filename);
 		} catch (FileNotFoundException ex) {
-			System.err.println("File" + args[0] + " not found.");
+			System.err.println("File" + filename + " not found.");
 			System.exit(-1);
 		}
 
@@ -28,7 +45,7 @@ public class asmbl {
 			System.exit(-1);
 		}
 		((ProgramNode)root.value).FlagCheck();
-		((ASTnode)root.value).translate();
+		((ProgramNode)root.value).translate(flag);
 		return;
     }
 }

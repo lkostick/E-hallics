@@ -2,6 +2,10 @@ Assembler
 =========================
 Usage: java -jar asmbl.jar \<input file> \> \<output file>
 
+Or java -jar asmbl.jar \<code_length> \<input file> \> \<output file>
+
+When \<code_length> is provided, the unspecified address will be filled by 0x0000.
+
 Instruction format:
 
 	1. Add <Rd> <Rs> <Rt>
@@ -15,7 +19,7 @@ Instruction format:
 	9. B <Cond> <Imme or Flag>
 	10. JL <Imme or Flag>
 	11. JR <Rd> <Set_Mode> or JR <Rd>
-	12. Send <Rd> <Send_Mode> or Send <Imme> or Send <Char>
+	12. Send <Rd> <Send_Mode> or Send <Imme> or Send <Char> or Send <String>
 	13. Set <Set_Mode>
 	14. Rv <Rd> <Device> <Imme>
 
@@ -31,7 +35,9 @@ Instruction format:
 
 \<Flag> : Can be any combination of letter and\or digit except reserved word
 
-\<Char> : One char enclosed by single quote. Support two escaped characters, '\t' and '\n'
+\<Char> : One char enclosed by single quotes. Support two escaped characters, \t and \n
+
+\<String> : A string enclosed by double quotes. Support four escaped characters, \t, \n, \\ and \"
 
 \<Device> : spart. For now only support one device choice
 

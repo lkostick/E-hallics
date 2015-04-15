@@ -12,10 +12,10 @@ CONT1: 	JL FUNC			# jump to function
 		SUB Ra, R3, R4
 		B EQ, PASS
 	
-FAIL:	send "Branch test not successful!\n"
+FAIL:	send "Jump test not successful!\n"
 		set IDLE						
 
-PASS:	send "Branch test successful!\n"
+PASS:	send "Jump test successful!\n"
 		set IDLE
 		
 FUNC:	LL	R3, 0x57

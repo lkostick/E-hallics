@@ -1,0 +1,22 @@
+@0100
+#################################
+# This section focuses on jumps #
+#################################
+		LL R1, 0x05		# R1 contains address of CONT1
+		JR R1				# Jump to CONT1
+		B UNCOND, FAIL
+		ADD Ra, Ra, Ra
+		ADD Ra, Ra, Ra
+CONT1: 	JL FUNC			# jump to function
+		LL R4, 0x57
+		SUB Ra, R3, R4
+		B EQ, PASS
+	
+FAIL:	send "Branch test not successful!\n"
+		set IDLE						
+
+PASS:	send "Branch test successful!\n"
+		set IDLE
+		
+FUNC:	LL	R3, 0x57
+        JR Rb				# return

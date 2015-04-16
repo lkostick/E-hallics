@@ -1,0 +1,22 @@
+@0100
+		LL R1, 0x55
+		LL R2, 0x33
+		LL Ra, 0x01
+		LL Rb, 0x01
+		ADD R3, R2, R1		# (should be 0x88)	
+		SW R3, R2   		# should store 0x88 to location 0x33
+		LD R4, R2   		# should read 0x88 from 0x33 (can load immediately after a store)
+        SUB R5, R4, R3
+		B EQ, ARND
+	    ADD Rb, Rb, Ra	# Rb++
+		ADD Rb, Rb, Ra	# Rb++
+		ADD Rb, Rb, Ra   # Rb++
+		ADD Rb, Rb, Ra   # Rb++
+ARND: 	SUB R5, Ra, Rb	# compare Rb to Ra, should still both be 1
+		B EQ, PASS
+		
+FAIL:	send "JunkTest test unsuccessful\n "
+		set IDLE		
+
+PASS:	send "JunkTest test successful\n "
+		set IDLE

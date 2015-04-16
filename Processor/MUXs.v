@@ -17,15 +17,6 @@ module P1_MUX(input sel, input [7:0] imme, input [15:0] p1, output reg [15:0] da
 	end
 endmodule
 
-module Flush_MUX(input miss, input [15:0] instr_in, output reg [15:0] instr_out);
-
-always @(*)
-	if (miss)
-		instr_out = 16'h0000;
-	else
-		instr_out = instr_in;
-endmodule
-
 module JR_MUX(input sel, input [15:0] imme, input [15:0] Reg, output reg [15:0] J_R);
 always @(*)
 	if (sel)

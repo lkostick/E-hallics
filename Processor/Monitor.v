@@ -8,17 +8,17 @@ localparam Spart_Handler = 16'h0030;
 reg bad_instr, illegal_pc, illegal_memory, spart_rcv;
 
 always @(posedge clk) begin
-	bad_instr <= Bad_Instr_in;
-	illegal_pc <= Illegal_PC_in;
-	illegal_memory <= Illegal_Memory_in;
-	spart_rcv <= (Spart_RCV_in & (~Mode[1]));
+	bad_instr <= Bad_Instr_in & ~miss & |Mode;
+	illegal_pc <= Illegal_PC_in & ~miss & |Mode;
+	illegal_memory <= Illegal_Memory_in & ~miss & |Mode;
+	spart_rcv <= (Spart_RCV_in & (~Mode[1])) & ~miss;
 end
 
 always @(posedge clk) begin
 	if (rst) 
 		Mode <= 2'b11;
-	else if (Bad_Instr_in|Illegal_PC_in| Illegal_Memory_in |(Spart_RCV_in & ~Mode[1])) 
-		Mode <= {1'b1, Mode[0]};
+	else if (((Bad_Instr_in|Illegal_PC_in| Illegal_Memory_in) & |Mode) |(Spart_RCV_in & ~Mode[1])) 
+		Mode <= {~miss, Mode[0]};
 	else if (IFID_Stall)
 		Mode <= Mode;
 	else

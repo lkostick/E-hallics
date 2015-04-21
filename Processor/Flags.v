@@ -1,4 +1,4 @@
-module Flags(input clk, Z, OV, N, input[1:0] Mode, input [1:0] Update, output reg z_out, ov_out, n_out);
+module Flags(input clk, Z, OV, N, input[1:0] Mode, input [1:0] Update, output z_out, o_out, n_out);
 
 //two sets of flags, one used in interruption handler and one used in user
 //mode
@@ -16,35 +16,19 @@ reg Z_I, O_I, N_I, Z_U, O_U, N_U;
 			O_U <= 0;
 			N_U <= 0;
 		end
-		else if (Mode == 2'b01) begin
-			Z_U <= (Update[1])? Z: Z_U;
-			O_U <= (Update[0])? OV: O_U;
-			N_U <= (Update[0])? N: N_U ;
-			Z_I <= 0;
-			O_I <= 0;
-			N_I <= 0;
-		end
 		else begin
-			Z_U <= Z_U;
-			O_U <= O_U;
-			N_U <= N_U;
-			Z_I <= (Update[1])? Z: Z_I;
-			O_I <= (Update[0])? OV: O_I;
-			N_I <= (Update[0])? N: N_I ;
+			Z_U <= (~Mode[1] & Update[1])? Z: Z_U;
+			O_U <= (~Mode[1] & Update[0])? OV: O_U;
+			N_U <= (~Mode[1] & Update[0])? N: N_U ;
+			Z_I <= ( Mode[1] & Update[1])? Z: Z_I;
+			O_I <= ( Mode[1] & Update[0])? OV: O_I;
+			N_I <= ( Mode[1] & Update[0])? N: N_I;
 		end
 	end
 
 // Output flags
-always @(*) begin
-	if (Mode == 2'b01) begin
-		z_out = Z_U;
-		ov_out = O_U;
-		n_out = N_U;
-	end
-	else begin
-		z_out = Z_I;
-		ov_out = O_I;
-		n_out = N_I;
-	end
-end
+assign z_out = (Mode[1]) ? Z_I : Z_U;
+assign n_out = (Mode[1]) ? N_I : N_U;
+assign o_out = (Mode[1]) ? O_I : O_U;
+
 endmodule

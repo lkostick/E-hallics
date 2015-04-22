@@ -10,3 +10,9 @@ Controller:
 SPART: 
 	
 	1. The baud rate is fixed, 38400
+FIFO SETUP:
+	1. Block RAM
+	2. One clock
+	3. Sync Reset
+	4. Depth -> anything
+	5. Data Read -> 8 bits

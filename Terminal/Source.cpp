@@ -86,6 +86,7 @@ int main()
 		}
 		else if (command.compare("store") == 0) {
 			error = 0;
+			addr = 0;
 			for (int i = 0; i < 4; i++) {
 				cin >> pc[i];
 				if (pc[i]<48 || (pc[i] >57 && pc[i] <'A') || (pc[i] >'F' &&pc[i] <'a') || (pc[i] >'f')) {
@@ -182,7 +183,7 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 	}
 
 	char byte,bytes;
-	int reg_flag = 1, trans;
+	int reg_flag = 1, trans, new_line = 1;
 	int reg_count = 0;
 	char HEX[16] ={'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 	DWORD dwBytesTransferred, byteWritten;
@@ -194,13 +195,20 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 			ReadFile(hSerial, &byte, 1, &dwBytesTransferred, 0);
 			if (dwBytesTransferred == 1)
 			{
+				if (new_line) {
+					cout << "> ";
+					new_line = 0;
+				}
 				if ((int)byte == -1 && reg_count == 0) {
 					reg_flag = -reg_flag;
 					if (reg_flag == -1) reg_count = 2;
 				}
 				else if(reg_flag ==1) {
 					if ((int)byte == 13)
+					{
 						cout << endl;
+						new_line = 1;
+					}
 					else cout << byte;
 				}
 				else
@@ -252,7 +260,6 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 				}
 			}
 			flag = 0;
-			cout << "Set PC to 0x" << pc[0] << pc[1] << pc[2] << pc[3] << endl;
 		}
 		else if (flag == 2)
 		{

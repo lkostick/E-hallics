@@ -1,0 +1,21 @@
+@0100
+#################################
+# This section focuses on jumps #
+#################################
+		LL R1, 0x04
+		LH R1, 0x1		# R1 contains address of CONT1
+		JR R1				# Jump to CONT1
+		B UNCOND, FAIL	
+CONT1: 	JL FUNC			# jump to function
+		LL R4, 0x41
+		SUB Rb, R3, R4
+		B EQ, PASS
+	
+FAIL:	send "Jump test not successful!\n"
+		set IDLE						
+
+PASS:	send "Jump test successful!\n"
+		set IDLE
+		
+FUNC:	LL	R3, 0x41
+        JR Rc				# return

@@ -1,0 +1,261 @@
+import java_cup.runtime.*; // defines the Symbol class
+
+class TokenVal {
+  // fields
+    int linenum;
+    int charnum;
+	String Index;
+
+  // constructor
+    TokenVal(int line, int ch, String Index) {
+        linenum = line;
+        charnum = ch;
+		this.Index = Index;
+    }
+}
+
+
+// The following class is used to keep track of the character number at which
+// the current token starts on its line.
+class CharNum {
+    static int num=1;
+}
+
+%%
+
+DIGIT=    [0-9]
+HEX=      [0-9a-fA-F]
+SEP=      [\040\t,]
+LETTER=   [a-zA-Z]
+
+%implements java_cup.runtime.Scanner
+%function next_token
+%type java_cup.runtime.Symbol
+
+%eofval{
+return new Symbol(sym.EOF);
+%eofval}
+
+%line
+
+%%
+[Aa][Dd][Dd] { //Add
+			   CharNum.num +=3;
+			   return new Symbol(sym.ADD, new TokenVal(yyline+1, CharNum.num-3, null));
+			 }
+[Ss][Uu][Bb] { //Sub
+			   CharNum.num +=3;
+			   return new Symbol(sym.SUB, new TokenVal(yyline+1, CharNum.num-3, null));
+			 }
+[Xx][Oo][Rr] { //Xor
+			   CharNum.num +=3;
+			   return new Symbol(sym.XOR, new TokenVal(yyline+1, CharNum.num-3, null));
+			 }
+[Ll][Dd]     { //Load
+			   CharNum.num +=2;
+			   return new Symbol(sym.LD, new TokenVal(yyline+1, CharNum.num-2, null));
+			 }
+[Ss][Ww]     { //Store
+			   CharNum.num +=2;
+			   return new Symbol(sym.SW, new TokenVal(yyline+1, CharNum.num-2, null));
+			 }
+[Ll][Hh]     { //Load high
+			   CharNum.num +=2;
+			   return new Symbol(sym.LH, new TokenVal(yyline+1, CharNum.num-2, null));
+			 }
+[Ll][Ll]     { //Load low
+			   CharNum.num +=2;
+			   return new Symbol(sym.LL, new TokenVal(yyline+1, CharNum.num-2, null));
+			 }
+[Ss][Hh][Ii][Ff][Tt] 
+			 { //Shift
+			   CharNum.num +=5;
+			   return new Symbol(sym.SHIFT, new TokenVal(yyline+1, CharNum.num-5, null));
+			 }
+[Bb]         { //Branch
+			   CharNum.num +=1;
+			   return new Symbol(sym.BRANCH, new TokenVal(yyline+1, CharNum.num-1, null));
+			 }
+[Jj][Ll]     { //Jump Link
+			   CharNum.num +=2;
+			   return new Symbol(sym.JLINK, new TokenVal(yyline+1, CharNum.num-2, null));
+			 }
+[Jj][Rr]     { //Jump Register
+			   CharNum.num +=2;
+			   return new Symbol(sym.JREG, new TokenVal(yyline+1, CharNum.num-2, null));
+			 }
+[Cc][Tt][Rr][Ll]     
+             { //Accelerator control
+			   CharNum.num +=4;
+			   return new Symbol(sym.CTRL, new TokenVal(yyline+1, CharNum.num-4, null));
+			 }
+[Ss][Ee][Nn][Dd]     
+             { //Send data through SPART
+			   CharNum.num +=4;
+			   return new Symbol(sym.SEND, new TokenVal(yyline+1, CharNum.num-4, null));
+			 }
+[Ss][Ee][Tt]    
+             { //Set CPU mode
+			   CharNum.num +=3;
+			   return new Symbol(sym.SET, new TokenVal(yyline+1, CharNum.num-3, null));
+			 }
+[Rr][Vv]     { //Receive data
+			   CharNum.num +=2;
+			   return new Symbol(sym.RECV, new TokenVal(yyline+1, CharNum.num-2, null));
+			 }
+
+[Rr]{HEX} { //Register
+			CharNum.num +=2;
+			return new Symbol(sym.REG,new TokenVal(yyline+1,CharNum.num-2,yytext().substring(1)));
+		  }
+0x{HEX}+ { // Hex integer
+			CharNum.num += yytext().length();
+			return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num - yytext().length(), yytext()));
+          }
+{DIGIT}+  { // Dec integer
+			CharNum.num += yytext().length();
+			return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num - yytext().length(), yytext()));
+          }
+
+[Ll][Ee][Ff][Tt][Ll][Oo][Gg][Ii][Cc] 
+		 { // Shift Mode, left logic
+		   CharNum.num += 2;
+		   return new Symbol(sym.SHIFTMODE, new TokenVal(yyline + 1, CharNum.num - 2, "0"));
+         }
+[Rr][Ii][Gg][Hh][Tt][Ll][Oo][Gg][Ii][Cc] 
+         { // Shift Mode, right logic
+		   CharNum.num += 2;
+		   return new Symbol(sym.SHIFTMODE, new TokenVal(yyline + 1, CharNum.num - 2, "1"));
+         }
+[Rr][Ii][Gg][Hh][Tt][Aa][Rr][Ii][Tt][Hh]
+         { // Shift Mode, right arithmetic
+		   CharNum.num += 2;
+		   return new Symbol(sym.SHIFTMODE, new TokenVal(yyline + 1, CharNum.num - 2, "2"));
+         }
+[Ee][Qq] { // Branch Condition, equal
+		   CharNum.num +=2;
+		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 2, "0"));
+         }
+[Gg][Tt] { // Branch Condition, Greater
+		   CharNum.num +=2;
+		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 2, "1"));
+         }
+[Gg][Tt][Ee] 
+		 { // Branch Condition, Greater equal
+		   CharNum.num +=3;
+		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 3, "2"));
+         }
+[Ll][Tt] { // Branch Condition, Less
+		   CharNum.num +=2;
+		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 2, "3"));
+         }
+[Ll][Tt][Ee] 
+		 { // Branch Condition, Less equal
+		   CharNum.num +=3;
+		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 3, "4"));
+         }
+[Nn][Ee][Qq] 
+		 { // Branch Condition, not equal
+		   CharNum.num +=3;
+		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 3, "5"));
+         }
+[Oo][Vv] { // Branch Condition, overflow
+		   CharNum.num +=2;
+		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 2, "6"));
+         }
+[Uu][Nn][Cc][Oo][Nn][Dd]
+		 { // Branch Condition, unconditional
+		   CharNum.num +=6;
+		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 6, "7"));
+		 }
+
+[Ii][Dd][Ll][Ee]
+		 { // CPU mode: idle
+		   CharNum.num += 4;
+		   return new Symbol(sym.SETMODE, new TokenVal(yyline + 1,CharNum.num - 4, "1"));
+		 }
+
+[Uu][Ss][Ee][Rr]
+		 { // CPU mode: User
+		   CharNum.num += 4;
+		   return new Symbol(sym.SETMODE, new TokenVal(yyline + 1,CharNum.num - 4, "2"));
+		 }
+
+[Pp][Rr][Ee][Vv][Ii][Oo][Uu][Ss]
+		 { // CPU mode: resume to previous mode
+		   CharNum.num += 8;
+		   return new Symbol(sym.SETMODE, new TokenVal(yyline + 1,CharNum.num - 8, "3"));
+		 }
+
+[Ll][Oo][Ww]
+		 { // Send mode: low half of register
+		   CharNum.num += 3;
+		   return new Symbol(sym.SENDMODE, new TokenVal(yyline + 1,CharNum.num - 3, "0"));
+		 }
+
+[Hh][Ii][Gg][Hh]
+		 { // Send mode: low half of register
+		   CharNum.num += 4;
+		   return new Symbol(sym.SENDMODE, new TokenVal(yyline + 1,CharNum.num - 4, "1"));
+		 }
+
+[Ss][Pp][Aa][Rr][Tt]
+		{ // Device selection;
+		  CharNum.num += 5;
+		  return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num -5, "0"));
+		}
+
+({LETTER}|{DIGIT}|_)+ 
+		  { // String
+			CharNum.num += yytext().length();
+			return new Symbol(sym.STR, new TokenVal(yyline + 1, CharNum.num - yytext().length(), yytext()));
+		  }
+
+({LETTER}|{DIGIT}|_)+: 
+		  {// Flag
+			CharNum.num += yytext().length();
+			return new Symbol(sym.FLAG, new TokenVal(yyline + 1, CharNum.num - yytext().length(),
+													 yytext().substring(0, yytext().length()-1)));
+		  }
+
+@{HEX}{HEX}{HEX}{HEX} 
+		  { // Address
+			CharNum.num += 5;
+			return new Symbol(sym.ADDR, new TokenVal(yyline + 1, CharNum.num - 5, yytext().substring(1)));
+		  }
+
+\'[^\n]\' { // Send data
+			CharNum.num += 3;
+			String data = String.valueOf(((int)yytext().charAt(1)));
+			return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num - 3, data));
+		  }
+
+\'\\[nt]\'
+		  { // Send data, escaped characters
+			CharNum.num += 4;
+			String data= null;
+			if (yytext().charAt(2) == 'n')
+				data = "0x0D";
+			else
+				data = "0x09";
+			return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num - 4, data));
+		  }
+\"([^\n\\]|\\[\\nt\"\'])+\"
+		  { //  send data, string
+			CharNum.num += yytext().length();
+			return new Symbol(sym.STRING, new TokenVal(yyline + 1, CharNum.num - yytext().length(),
+							yytext().substring(1, yytext().length() - 1)));
+		  }
+
+(//|#)[^\n]*
+ 		  { // This is a comment, Ignore
+		  	CharNum.num += yytext().length();
+		  }
+
+{SEP}     { CharNum.num+=yytext().length();}
+        
+\n        { CharNum.num = 1; }
+
+.		  {  // An illegal character
+			 System.err.println(yyline+1+":"+CharNum.num+++" illegal character "+yytext());
+          }

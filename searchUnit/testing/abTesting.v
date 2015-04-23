@@ -1,8 +1,9 @@
-module abTesting(S, clk, reset, outS, finish);
+module abTesting(S, L, clk, reset, outS, finish);
 	localparam t = 4;
 	localparam c = 1;
 	input reset, clk;
 	input[127:0] S;
+	input[31:0] L;
 //	output reg[31:0] A,B;
 	reg[31:0] A, B;
 	output[127:0] outS;
@@ -13,7 +14,7 @@ module abTesting(S, clk, reset, outS, finish);
 //	wire[31:0] S,L;
 	output finish;
 //	assign S = 32'h2;
-	assign L = 32'h1;
+//	assign L = 32'h1;
 	
 	assign outS[31:0] = sArray[0];
 	assign outS[63:32] = sArray[1];

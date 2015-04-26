@@ -106,11 +106,6 @@ return new Symbol(sym.EOF);
             return S;
           }
 
-"cin"     { Symbol S = new Symbol(sym.CIN, new TokenVal(yyline+1, CharNum.num));
-            CharNum.num += yytext().length();
-            return S;
-          }
-          
 "cout"    { Symbol S = new Symbol(sym.COUT, new TokenVal(yyline+1, CharNum.num));
             CharNum.num += yytext().length();
             return S;
@@ -135,7 +130,25 @@ return new Symbol(sym.EOF);
             CharNum.num += yytext().length();
             return S;
           }
+
+"__overflow"
+		  { Symbol S= new Symbol(sym.OVERFLOW, new TokenVal(yyline+1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
           
+"endl"    { //String literal for new line
+	        Symbol S = new Symbol(sym.STRINGLITERAL,
+					         new StrLitTokenVal(yyline+1, CharNum.num, "\"\\n\""));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
+"for"     { Symbol S = new Symbol(sym.FOR, new TokenVal(yyline + 1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
 ({LETTER}|"_")({LETTER}|{DIGIT}|"_")* {
             Symbol S = new Symbol(sym.ID, 
                              new IdTokenVal(yyline+1, CharNum.num, yytext()));
@@ -145,11 +158,11 @@ return new Symbol(sym.EOF);
 
 {DIGIT}+  { double val = Double.parseDouble(yytext());
             int intVal;
-            if (val > Integer.MAX_VALUE) {
+            if (val > 32767) {
                 ErrMsg.warn(yyline+1, CharNum.num,
-                            "integer literal too large; using max value");
-                intVal = Integer.MAX_VALUE;
-            } else {
+                            "integer literal too large; using 32767");
+                intVal = 32767;
+			} else {
                 intVal = Integer.parseInt(yytext());
             }
             Symbol S = new Symbol(sym.INTLITERAL,
@@ -158,7 +171,6 @@ return new Symbol(sym.EOF);
             return S;
           }
 
-          
 \"({NOTNEWLINEORQUOTEORESCAPE}|\\{ESCAPEDCHAR})*\" {
             String strVal = yytext();
             Symbol S = new Symbol(sym.STRINGLITERAL,
@@ -234,11 +246,6 @@ return new Symbol(sym.EOF);
             return S;
           }
 
-">>"      { Symbol S = new Symbol(sym.READ, new TokenVal(yyline+1, CharNum.num));
-            CharNum.num += 2;
-            return S;
-          }
-          
 "++"      { Symbol S = new Symbol(sym.PLUSPLUS, new TokenVal(yyline+1, CharNum.num));
             CharNum.num += 2;
             return S;
@@ -258,17 +265,17 @@ return new Symbol(sym.EOF);
             CharNum.num++;
             return S;
           }          
-          
-"*"       { Symbol S = new Symbol(sym.TIMES, new TokenVal(yyline+1, CharNum.num));
-            CharNum.num++;
-            return S;
-          }              
-          
-"/"       { Symbol S = new Symbol(sym.DIVIDE, new TokenVal(yyline+1, CharNum.num));
-            CharNum.num++;
-            return S;
-          }
 
+"+="      { Symbol S = new Symbol(sym.PLUSASSIGN, new TokenVal(yyline + 1, CharNum.num));
+			CharNum.num += 2;
+			return S;
+		  }
+
+"-="      { Symbol S = new Symbol(sym.MINUSASSIGN, new TokenVal(yyline + 1, CharNum.num));
+			CharNum.num += 2;
+			return S;
+		  }
+          
 "!"       { Symbol S = new Symbol(sym.NOT, new TokenVal(yyline+1, CharNum.num));
             CharNum.num++;
             return S;
@@ -318,6 +325,16 @@ return new Symbol(sym.EOF);
             CharNum.num++;
             return S;
           }    
+
+"["       { Symbol S = new Symbol(sym.LBRACKET, new TokenVal(yyline+1, CharNum.num));
+			CharNum.num++;
+			return S;
+		  }
+
+"]"       { Symbol S = new Symbol(sym.RBRACKET, new TokenVal(yyline + 1, CharNum.num));
+	        CharNum.num++;
+			return S;
+		  }
 
 .         { ErrMsg.fatal(yyline+1, CharNum.num,
                          "illegal character ignored: " + yytext());

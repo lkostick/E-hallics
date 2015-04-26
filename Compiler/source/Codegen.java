@@ -25,9 +25,15 @@ import java.util.*;
 public class Codegen {
     // file into which generated code is written
     public static PrintWriter p = null;    
+	
+	// String handler
 	public static HashMap<String, String> strLiteral = null;
 	public static List<String> strLabel = null;
-	public static HashMap<String, Integer> labelSize = null;
+	public static HashMap<String, String> labelSize = null;
+
+	// values of Print address
+	public static int Print_Int = -1;
+	public static int Print_Str = -1;
 
     // values of true and false
     public static final String TRUE = "1";
@@ -222,8 +228,7 @@ public class Codegen {
     // **********************************************************************
     public static void genPush(String s) {
         generateWithComment("sw", "PUSH", s, SP);
-		generateWithComment("ll", "", T5, "1");
-        generate("sub", SP, SP, T5);
+        generateWithComment("addi", "", SP, SP, "0xf");
     }
 
     // **********************************************************************
@@ -231,8 +236,7 @@ public class Codegen {
     //    generate code to pop into the given register
     // **********************************************************************
     public static void genPop(String s) {
-		generateWithComment("ll", "", T5, "1");
-		generateWithComment("add", "", SP, SP, T5);
+		generateWithComment("addi", "", SP, SP, "0x1");
         generateWithComment("ld", "POP", s, SP);
     }
 

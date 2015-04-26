@@ -7,11 +7,22 @@ import java.util.*;
 public class SemSym {
     private Type type;
     protected int level, offset; // level 0 is global
+	protected int arraySize;
 
     public SemSym(Type type) {
         this.type = type;
+		this.arraySize = -1;
     }
     
+    public SemSym(Type type, int arraySize) {
+        this.type = type;
+		this.arraySize = arraySize;
+    }
+
+	public int getArraySize() {
+		return this.arraySize;
+	}
+
     public Type getType() {
         return type;
     }
@@ -99,6 +110,11 @@ class StructSym extends SemSym {
     
     public StructSym(IdNode id) {
         super(new StructType(id));
+        structType = id;
+    }
+
+    public StructSym(IdNode id, int size) {
+        super(new StructType(id), size);
         structType = id;
     }
 

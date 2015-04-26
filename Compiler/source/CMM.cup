@@ -31,7 +31,6 @@ terminal                VOID;
 terminal TokenVal       TRUE;
 terminal TokenVal       FALSE;
 terminal                STRUCT;
-terminal                CIN;
 terminal                COUT;
 terminal                IF;
 terminal                ELSE;
@@ -48,13 +47,10 @@ terminal                SEMICOLON;
 terminal                COMMA;
 terminal                DOT;
 terminal                WRITE;
-terminal                READ;
 terminal                PLUSPLUS;
 terminal                MINUSMINUS;
 terminal                PLUS;
 terminal                MINUS;
-terminal                TIMES;
-terminal                DIVIDE;
 terminal                NOT;
 terminal                AND;
 terminal                OR;
@@ -65,7 +61,12 @@ terminal                GREATER;
 terminal                LESSEQ;
 terminal                GREATEREQ;
 terminal                ASSIGN;
-
+terminal TokenVal		OVERFLOW;
+terminal				PLUSASSIGN;
+terminal				MINUSASSIGN;
+terminal				FOR;
+terminal                LBRACKET;
+terminal				RBRACKET;
 
 /* Nonterminals
  *
@@ -74,11 +75,12 @@ terminal                ASSIGN;
  */
 non terminal ProgramNode      program;
 non terminal LinkedList       declList;
-non terminal DeclNode         decl;
+non terminal LinkedList       decl;
 non terminal LinkedList       varDeclList;
-non terminal VarDeclNode      varDecl;
-non terminal FnDeclNode       fnDecl;
-non terminal StructDeclNode   structDecl;
+non terminal LinkedList       varDecl;
+non terminal LinkedList       myVarDecl;
+non terminal LinkedList       fnDecl;
+non terminal LinkedList       structDecl;
 non terminal LinkedList       structBody;
 non terminal LinkedList       formals;
 non terminal LinkedList       formalsList;
@@ -94,6 +96,10 @@ non terminal LinkedList       actualList;
 non terminal TypeNode         type;
 non terminal ExpNode          loc;
 non terminal IdNode           id;
+non terminal PostIncNode      postIncExp;
+non terminal PostDecNode      postDecExp;
+non terminal LinkedList		  writeStmt;
+non terminal LinkedList		  writeExp;
  
  
 /* NOTE: Add precedence and associativity declarations here */
@@ -102,23 +108,20 @@ precedence left OR;
 precedence left AND;
 precedence nonassoc EQUALS, NOTEQUALS, LESS, GREATER, LESSEQ, GREATEREQ;
 precedence left PLUS, MINUS;
-precedence left TIMES, DIVIDE;
 precedence right NOT;
 
 start with program;
 
 
-/* Grammar with actions
- *
- * NOTE: add more grammar rules below
- */
 program         ::= declList: d
                 {: RESULT = new ProgramNode(new DeclListNode(d));
                 :}
                 ;
 
 declList        ::= declList:dl decl:d
-                {: dl.addLast(d);
+                {: for (int i = 0; i< d.size(); i++) {
+						dl.add((DeclNode)d.get(i));
+				   }
                    RESULT = dl;
                 :}
                 | /* epsilon */
@@ -127,7 +130,11 @@ declList        ::= declList:dl decl:d
                 ;
 
 decl            ::= varDecl:v
-                {: RESULT = v;
+                {:  LinkedList<DeclNode> list = new LinkedList<DeclNode>();
+					for (int i = 0; i<v.size(); i++) {
+						list.addLast((VarDeclNode)v.get(i));
+					}
+					RESULT = list;
                 :}
                 | fnDecl:f
                 {: RESULT = f;
@@ -138,7 +145,10 @@ decl            ::= varDecl:v
                 ;
 
 varDeclList     ::= varDeclList:vdl varDecl:vd
-                {: vdl.addLast(vd);
+                {: 
+				   for (int i = 0; i <vd.size(); i++) {
+					   vdl.addLast((VarDeclNode)vd.get(i));
+				   }
                    RESULT = vdl;
                 :}
                 | /* epsilon */
@@ -146,32 +156,60 @@ varDeclList     ::= varDeclList:vdl varDecl:vd
                 :}
                 ;
 
-varDecl         ::= type:t id:i SEMICOLON
-                {: RESULT = new VarDeclNode(t, i, VarDeclNode.NOT_STRUCT);
+varDecl         ::= type:t myVarDecl:vdl SEMICOLON
+                {:  LinkedList<VarDeclNode> list = new LinkedList<VarDeclNode>();
+					for (int i = 0; i< vdl.size(); i++) {
+						list.addLast(new VarDeclNode(t, (IdNode)vdl.get(i), VarDeclNode.NOT_STRUCT));
+					}
+					RESULT = list;
+
                 :}
-                | STRUCT id:t id:i SEMICOLON
-                {: RESULT = new VarDeclNode(new StructNode(t), i, 0);
+                | STRUCT id:t myVarDecl:vdl SEMICOLON
+                {:  LinkedList<VarDeclNode> list = new LinkedList<VarDeclNode>();
+					for (int i = 0; i < vdl.size(); i++) {
+						list.addLast(new VarDeclNode(new StructNode(t), (IdNode)vdl.get(i), 0));
+					}
+					RESULT = list;
                 :}
                 ;
 
+myVarDecl       ::= myVarDecl:vdl COMMA id:i
+				{: vdl.addLast(i);
+				   RESULT = vdl;
+				:}
+				| id:i
+				{: LinkedList<IdNode> list = new LinkedList<IdNode>();
+				   list.addLast(i);
+				   RESULT = list;
+				:}
+				;
+
 fnDecl          ::= type:t id:i formals:f fnBody:fb
-                {: RESULT = new FnDeclNode(t, i, new FormalsListNode(f), fb);
+                {: 	LinkedList<FnDeclNode> list = new LinkedList<FnDeclNode>();
+					list.add(new FnDeclNode(t, i, new FormalsListNode(f), fb));
+					RESULT = list;
                 :}
                 ;
 
 structDecl      ::= STRUCT id:i LCURLY structBody:sb RCURLY SEMICOLON
-                {: RESULT = new StructDeclNode(i, new DeclListNode(sb));
+                {:  LinkedList<StructDeclNode> list = new LinkedList<StructDeclNode>();
+					list.add(new StructDeclNode(i, new DeclListNode(sb)));
+					RESULT = list;
                 :}
                 ;
 
 structBody      ::=  structBody:sb varDecl:vd 
-                {: sb.addLast(vd);
+                {: for (int i =0 ;i<vd.size(); i++) {
+				   	sb.addFirst((VarDeclNode)vd.get(i));
+					}
                    RESULT = sb;
                 :}
                 | varDecl:vd
                 {: LinkedList<VarDeclNode> list = 
 				                           new LinkedList<VarDeclNode>();
-                   list.addLast(vd);
+				   for (int i= 0;i <vd.size(); i++) {
+                     list.addFirst((VarDeclNode)vd.get(i));
+				   }
                    RESULT = list;
                 :}
                 ;
@@ -212,23 +250,61 @@ stmtList        ::= stmtList:sl stmt:s
                 {: sl.addLast(s);
 				   RESULT = sl;
                 :}
+				| stmtList:sl writeStmt:w
+				{: for (int i = 0; i< w.size(); i++) {
+				       sl.addLast((StmtNode)w.get(i));
+				   }
+				   RESULT = sl;
+				:}
                 | /* epsilon */
                 {: RESULT = new LinkedList<StmtNode>();
                 :}
                 ;
 
+writeStmt       ::= COUT writeExp:we SEMICOLON
+                {: LinkedList<WriteStmtNode> list = new LinkedList<WriteStmtNode>();
+				   for (int i = 0; i < we.size(); i++) {
+					   list.add(new WriteStmtNode((ExpNode)we.get(i)));
+				   }
+				   RESULT = list;
+                :}
+				;
+writeExp        ::= writeExp:we WRITE exp:e
+				{:  we.addLast(e);
+					RESULT = we;
+				:}
+				| /* epsilon */
+				{: RESULT= new LinkedList<ExpNode>();
+				:}
+				;
+
 stmt            ::= assignExp:ae SEMICOLON
                 {: RESULT = new AssignStmtNode(ae);
 				:}
-                | loc:lc PLUSPLUS SEMICOLON
-                {: RESULT = new PostIncStmtNode(lc);
+				| loc:lc PLUSASSIGN exp:e SEMICOLON
+				{: RESULT = new AssignStmtNode(new AssignNode(lc, new PlusNode(lc,e)));
+				:}
+				| loc:lc MINUSASSIGN exp:e SEMICOLON
+				{: RESULT = new AssignStmtNode(new AssignNode(lc, new MinusNode(lc,e)));
+				:}
+                | postIncExp:pie SEMICOLON
+                {: RESULT = new PostIncStmtNode(pie);
                 :}
-                | loc:lc MINUSMINUS SEMICOLON
-                {: RESULT = new PostDecStmtNode(lc);
+                | postDecExp:pde SEMICOLON
+                {: RESULT = new PostDecStmtNode(pde);
                 :}
-                | COUT WRITE exp:e SEMICOLON
-                {: RESULT = new WriteStmtNode(e);
-                :}				
+				| FOR LPAREN exp:e1 SEMICOLON exp:e2 SEMICOLON exp:e3 RPAREN LCURLY varDeclList:vdl stmtList:sl RCURLY
+				{: RESULT = new ForStmtNode(e1, e2, e3, new DeclListNode(vdl), new StmtListNode(sl));
+				:}
+				| FOR LPAREN SEMICOLON exp:e2 SEMICOLON exp:e3 RPAREN LCURLY varDeclList:vdl stmtList:sl RCURLY
+				{: RESULT = new ForStmtNode(null, e2, e3, new DeclListNode(vdl), new StmtListNode(sl));
+				:}  
+				| FOR LPAREN exp:e1 SEMICOLON exp:e2 SEMICOLON RPAREN LCURLY varDeclList:vdl stmtList:sl RCURLY
+				{: RESULT = new ForStmtNode(e1, e2, null, new DeclListNode(vdl), new StmtListNode(sl));
+				:}
+				| FOR LPAREN SEMICOLON exp:e2 SEMICOLON RPAREN LCURLY varDeclList:vdl stmtList:sl RCURLY
+				{: RESULT = new ForStmtNode(null, e2, null, new DeclListNode(vdl), new StmtListNode(sl));
+				:}
                 | IF LPAREN exp:e RPAREN LCURLY varDeclList:vdl stmtList:sl RCURLY
                 {: RESULT = new IfStmtNode(e, 
 				                new DeclListNode(vdl), new StmtListNode(sl));
@@ -257,9 +333,25 @@ assignExp       ::= loc:lc ASSIGN exp:e
                 {: RESULT = new AssignNode(lc, e);
 				:}
 				;
+
+postIncExp      ::= loc:lc PLUSPLUS
+				{: RESULT = new PostIncNode(lc);
+				:}
+				;
+
+postDecExp      ::= loc:lc MINUSMINUS
+				{: RESULT = new PostDecNode(lc);
+				:}
+				;
 				
 exp             ::= assignExp:ae
                 {: RESULT = ae;
+				:}
+				| postIncExp:pie
+				{: RESULT = pie;
+				:}
+				| postDecExp:pde
+				{: RESULT = pde;
 				:}
                 | exp:e1 PLUS exp:e2
                 {: RESULT = new PlusNode(e1, e2);
@@ -300,6 +392,9 @@ exp             ::= assignExp:ae
                 | term:t
                 {: RESULT = t;
                 :}
+				| OVERFLOW:o
+				{: RESULT = new OverFlowNode(o.linenum, o.charnum);
+				:}
                 ;	
 				
 term            ::= loc:lc
@@ -367,5 +462,8 @@ loc             ::= id:i
 id              ::= ID:i
                 {: RESULT = new IdNode(i.linenum, i.charnum, i.idVal);
                 :}
+				| ID:i LBRACKET exp:e RBRACKET
+				{: RESULT = new IdNode(i.linenum, i.charnum, i.idVal, e);
+				:}
                 ;
 				

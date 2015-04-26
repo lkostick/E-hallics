@@ -20,12 +20,13 @@ public class Compiler {
 	public static final int RESULT_CORRECT = 0;
 	public static final int RESULT_SYNTAX_ERROR = 1;
 	public static final int RESULT_TYPE_ERROR = 2;
+	public static final int RESULT_NAME_ERROR = 3;
 	public static final int RESULT_OTHER_ERROR = -1;
 
 	public Compiler() {
 	}
 	
-	private Compiler(String[] args){
+	public Compiler(String[] args){
     	//Parse arguments    	
         if (args.length < 2) {
         	String msg = "please supply name of file to be parsed"
@@ -132,9 +133,15 @@ public class Compiler {
 		}
 		
 		astRoot.nameAnalysis();  // perform name analysis
+
+		if (ErrMsg.getErr()) {
+			return Compiler.RESULT_NAME_ERROR;
+		}
 		
 		astRoot.typeCheck();
-		
+		if (ErrMsg.getErr()) {
+			return Compiler.RESULT_TYPE_ERROR;
+		}
 		astRoot.codeGen(outFile);
 		//astRoot.unparse(outFile, 0);
 		return Compiler.RESULT_CORRECT;
@@ -152,6 +159,8 @@ public class Compiler {
 			pukeAndDie("Syntax error", resultCode);
 		case RESULT_TYPE_ERROR:
 			pukeAndDie("Type checking error", resultCode);
+		case RESULT_NAME_ERROR:
+			pukeAndDie("Name analyzing error", resultCode);
 		default:
 			pukeAndDie("Type checking error", RESULT_OTHER_ERROR);
 		}

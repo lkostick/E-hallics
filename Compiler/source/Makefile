@@ -54,18 +54,15 @@ EmptySymTableException.class: EmptySymTableException.java
 Codegen.class: Codegen.java
 	$(JC) -g Codegen.java
 
+simulator.class: simulator.java
+	$(JC) -g simulator.java
+
+jar: Compiler.class
+	jar cvfe Compiler.jar Compiler *.class java_cup/runtime/Scanner.class java_cup/runtime/Symbol.class java_cup/runtime/lr_parser.class java_cup/runtime/SymbolFactory.class java_cup/runtime/DefaultSymbolFactory.class
+
 ###
-# test
+# clean up
 ###
-test: demo.cf P5.class
-	java P5 demo.cf demo.s
-	spim -f demo.s > output
-	echo Loaded: /u/c/s/cs536-1/public/tools//spim/exceptions.s> correct
-	echo TEST FINISHED>> correct
-	diff output correct
-	rm -f output correct
-###
-# clean
-###
+
 clean:
-	rm -f *~ *.class parser.java CSX.jlex.java sym.java
+	rm -f *~ *.class asmbl.jlex.java parser.java sym.java Compiler.jar

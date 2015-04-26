@@ -52,9 +52,9 @@ Function:
 
 Statement:
 	
-	1. support while and for loop, format is same with c
+	1. support while and for loop, format is same with c. Must use {} to enclose statements
 	2. support "cout << expression;" for output
-	3. support if and if-else statements. Not support elseif
+	3. support if and if-else statements. Not support elseif. Must use {} to enclose statements
 
 Expression:
 	

@@ -42,13 +42,14 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 	reg [74:0] dcache_wr_data;
 	reg [73:0] icache_wr_data;
 	reg [63:0] m_wr_data;
+	//reg [31:0] lru_mem;
 	reg [13:0] v_addr;
 	reg [1:0] writeLineInd;
 	reg lru_we;
 	reg freez;
 	reg roll;
 	reg wt_sel;
-	
+	reg d_we_lru;
 	//integer probe;
 
 	assign i_hit = ~freez;
@@ -78,6 +79,15 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 							.dina(dcache_wr_data), // input [74 : 0] dina
 							.douta(d_rd_line1) // output [74 : 0] douta
 							);
+	/*
+	assign lru_in = lru_mem[d_wr_addr_sel];
+	always @ (posedge clk) begin
+		if(rst)
+			lru_mem<=0;
+		else if(lru_we)
+			lru_mem[d_wr_addr_sel] <= lru_out;
+	end
+	*/
 	lru d_lru_set (
 						  .clka(clk), // input clka
 						  .wea(lru_we), // input [0 : 0] wea
@@ -85,6 +95,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						  .dina(lru_out), // input [0 : 0] dina
 						  .douta(lru_in) // output [0 : 0] douta
 						);
+						
 	icache icache_dt (
 						  .clka(clk), // input clka
 						  .wea(i_we), // input [0 : 0] wea
@@ -269,10 +280,14 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		//probe = 0;
 		i_output_sel2 = 0;
 		wt_sel = 0;
+		d_we_lru = 0;
 
 		case(state)
 			normal: begin
-				/* handle the case that there is no data re/we */
+				/* handle the case that there is no data re/we 
+				if(we == 1) begin
+					d_we_lru = 1;
+				end*/
 				if(i_hitIn == 0) begin
 					if(v_hitIn == 0) begin
 						freez = 1;
@@ -455,6 +470,15 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						v_we = 1;
 						v_wr_data = {1'b0, 79'b0};
 					end
+					if(d_hitIn == 1) begin
+						d_wr_data = {1'b0, 72'b0};
+						if(d_hit_ind == 0) begin
+							d_we0 = 1;							
+						end
+						else begin
+							d_we1 = 1;
+						end
+					end
 					m_we = 1;
 					m_addr = d_addr[15:2];
 					case(d_addr[1:0])
@@ -590,6 +614,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					setOffset = (d_valid0 == 0) ? 1'b0 :
 								(d_valid1 == 0) ? 1'b1 :
 								lru_in;
+					//lru_we = 1;
+					//lru_out = setOffset;
 					dcache_wr_data = {2'b10, d_addr[15:7], m_rd_data};
 					nextState = normal;
 				end

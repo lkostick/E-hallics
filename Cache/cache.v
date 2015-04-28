@@ -43,7 +43,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 	reg [73:0] icache_wr_data;
 	reg [63:0] m_wr_data;
 	//reg [31:0] lru_mem;
-	reg [13:0] v_addr;
+	//reg [13:0] v_addr;
 	reg [1:0] writeLineInd;
 	reg lru_we;
 	reg freez;
@@ -108,7 +108,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 
 	victim_buffer v_buffer(clk, rst, v_we, v_re, i_addr[15:2], d_addr[15:2], 
 						 v_wr_data, writeLineInd, v_rd_data, 
-						 v_hit_line, v_hit, evict_index, emptySlots, roll, victimEv_data, i_hitIn);
+						 v_hit_line, v_hit, evict_index, emptySlots, roll, victimEv_data, ~i_hitIn);
 
 	//unified_mem u_mem(clk,rst,m_addr,m_re,m_we,m_wr_data,m_rd_data,m_rdy);	
 	main_mem u_mem(clk, m_we, m_addr, m_wr_data, m_rd_data);
@@ -382,7 +382,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 				// write case;
 				else if (we == 1 && wt == 0) begin
 					d_re = 1;
-					v_addr = d_addr[15:2];
+					//v_addr = d_addr[15:2];
 					if(d_hitIn == 1) begin
 						lru_we = 1;
 						lru_out = d_hit_ind;
@@ -444,7 +444,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					freez = 1;
 					nextState = hDetect;
 					wt_sel = 1;
-					v_addr = d_addr[15:2];
+					//v_addr = d_addr[15:2];
 					m_re = 1;
 					m_addr = d_addr[15:2];
 				end
@@ -455,6 +455,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 			end
 			hDetect: begin
 				freez = 1;
+				wt_sel = 1;
+				//v_addr = d_addr[15:2];
 				if(m_rdy == 0) begin
 					m_re = 1;
 					//m_wr_data = v_rd_data[63:0];
@@ -636,4 +638,3 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		endcase
 	end
 endmodule
-

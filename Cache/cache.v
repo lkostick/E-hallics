@@ -636,3 +636,4 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		endcase
 	end
 endmodule
+

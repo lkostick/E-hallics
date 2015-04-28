@@ -471,13 +471,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						v_wr_data = {1'b0, 79'b0};
 					end
 					if(d_hitIn == 1) begin
-						d_wr_data = {1'b0, 72'b0};
-						if(d_hit_ind == 0) begin
-							d_we0 = 1;							
-						end
-						else begin
-							d_we1 = 1;
-						end
+						dcache_wr_data = {1'b0, 72'b0};
+						d_we = 1;
 					end
 					m_we = 1;
 					m_addr = d_addr[15:2];

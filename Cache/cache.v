@@ -57,7 +57,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 	wire we0 = (setOffset == 0 && d_we == 1) ? 1 : 0;
 	wire we1 = (setOffset == 1 && d_we == 1) ? 1 : 0;
 	
-	wire [5:0] i_wr_addr_sel = i_we? i_addr[7:2] : wt_sel ? d_addr[7:2] : i_addr_pre[7:2];
+	wire [5:0] i_wr_addr_sel = (i_we==1&&wt_sel==0)? i_addr[7:2] : wt_sel ? d_addr[7:2] : i_addr_pre[7:2];
 	wire [4:0] d_wr_addr_sel = d_we? d_addr[6:2] : d_addr_pre[6:2];
 	wire i_hitIn;
 	/* initialize subcomponents */
@@ -475,6 +475,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					if(d_hitIn == 1) begin
 						dcache_wr_data = {1'b0, 72'b0};
 						d_we = 1;
+						setOffset = d_hit_ind;
 					end
 					m_we = 1;
 					m_addr = d_addr[15:2];

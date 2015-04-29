@@ -34,7 +34,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 	wire [3:0] emptySlots;
 	wire [1:0] v_hit_line;
 	wire [1:0] evict_index;
-	wire v_hit;//, m_rdy;
+	wire v_hit, v_hit_i, v_hit_d;//, m_rdy;
 
 	reg setOffset, d_we, d_re, lru_out, i_we, i_re, v_we, v_re, m_re, m_we;
 	reg [13:0] m_addr;
@@ -108,7 +108,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 
 	victim_buffer v_buffer(clk, rst, v_we, v_re, i_addr[15:2], d_addr[15:2], 
 						 v_wr_data, writeLineInd, v_rd_data, 
-						 v_hit_line, v_hit, evict_index, emptySlots, roll, victimEv_data, ~i_hitIn);
+						 v_hit_line, v_hit_i, v_hit_d, evict_index, emptySlots, roll, victimEv_data, ~i_hitIn);
 
 	//unified_mem u_mem(clk,rst,m_addr,m_re,m_we,m_wr_data,m_rd_data,m_rdy);	
 	main_mem u_mem(clk, m_we, m_addr, m_wr_data, m_rd_data);
@@ -169,7 +169,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		ievict=3'b011,
 		devict=3'b100,
 		hDetect=3'b101,
-		write_through=3'b110;
+		write_through=3'b110,
+		hdevict = 3'b111;
 	reg [2:0] state, nextState;
 	reg [3:0] emptySlots_reg;
 	always @(posedge clk/*, posedge rst*/) begin
@@ -210,7 +211,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 	assign i_hitIn = (i_valid==1 && i_tag==i_dst_tag) ? 1 : 0;
 	wire d_hitIn = ((d_valid0==1 && d_tag0==d_dst_tag) || (d_valid1==1 && d_tag1==d_dst_tag)) ? 1 : 0;
 	wire d_hit_ind = (d_valid0==1 && d_tag0==d_dst_tag) ? 0 : 1;
-	wire v_hitIn = (v_valid == 1 && v_hit == 1) ? 1 : 0;
+	wire v_hitIn = /*(v_valid == 1 && */(v_hit == 1) ? 1 : 0;
 
 
 	/* select word */
@@ -289,7 +290,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					d_we_lru = 1;
 				end*/
 				if(i_hitIn == 0) begin
-					if(v_hitIn == 0) begin
+					if(v_hit_i == 0) begin
 						freez = 1;
 						if(i_valid == 0) begin
 							//m_addr = i_addr[15:2];
@@ -338,7 +339,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 								  ~lru_in;
 								  //probe = 6;
 						dcache_wr_data = {v_rd_data[79:78], v_rd_data[77:69], v_rd_data[63:0]};
-						if(v_hitIn == 0) begin
+						if(v_hit_d == 0) begin
 							freez = 1;
 							//probe = 7;
 							if((d_valid0 == 0) || (d_valid1 == 0)) begin
@@ -400,7 +401,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 								  (d_valid1 == 0) ? 1 :
 								  ~lru_in;
 						//probe = 13;
-						if(v_hitIn == 0) begin
+						if(v_hit_d == 0) begin
 							freez = 1;
 							if((d_valid0 == 0) || (d_valid1 == 0)) begin
 								nextState = dfetch;
@@ -444,9 +445,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					freez = 1;
 					nextState = hDetect;
 					wt_sel = 1;
-					//v_addr = d_addr[15:2];
-					m_re = 1;
-					m_addr = d_addr[15:2];
+					d_re = 1;
 				end
 				else begin
 					//probe = 18;
@@ -457,37 +456,50 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 				freez = 1;
 				wt_sel = 1;
 				//v_addr = d_addr[15:2];
-				if(m_rdy == 0) begin
-					m_re = 1;
-					//m_wr_data = v_rd_data[63:0];
-					m_addr = d_addr[15:2];
-					nextState = hDetect;
+				if(i_hitIn == 1) begin
+					i_we = 1;
+					icache_wr_data = {1'b0, 73'b0};
+				end
+				if(d_hitIn == 1) begin
+					d_we = 1;
+					dcache_wr_data = (d_hit_ind == 0) ? {d_rd_line0[74], 1'b1, d_rd_line0[72:64], replacement} :
+															{d_rd_line1[74], 1'b1, d_rd_line1[72:64], replacement};
+					nextState = hdevict;
+					setOffset = d_hit_ind;
+					//lru_we = 1;
+					//lru_out = (d_valid0 == 0) ? 0 :
+								  //(d_valid1 == 0) ? 1 :
+								  //lru_in;
+				end
+				else if(v_hit_d == 1) begin						
+					w_output_sel = 1;
+					v_wr_data = {2'b11,v_rd_data[77:64], replacement};
+					v_we = 1;
+					writeLineInd = v_hit_line;
+					nextState = normal;
 				end
 				else begin
-					if(i_hitIn == 1) begin
-						i_we = 1;
-						icache_wr_data = {1'b0, 73'b0};
+					if(m_rdy == 0) begin
+						m_re = 1;
+						m_addr = d_addr[15:2];
+						nextState = hDetect;
 					end
-					if(v_hitIn == 1) begin
-						v_we = 1;
-						v_wr_data = {1'b0, 79'b0};
+					else begin
+						m_we = 1;
+						m_addr = d_addr[15:2];
+						case(d_addr[1:0])
+							2'b00: m_wr_data = {m_rd_data[63:16], wrt_data};
+							2'b01: m_wr_data = {m_rd_data[63:32], wrt_data, m_rd_data[15:0]};
+							2'b10: m_wr_data = {m_rd_data[63:48], wrt_data, m_rd_data[31:0]};
+							2'b11: m_wr_data = {wrt_data, m_rd_data[47:0]};
+						endcase
+						nextState = write_through;
 					end
-					if(d_hitIn == 1) begin
-						dcache_wr_data = {1'b0, 72'b0};
-						d_we = 1;
-						setOffset = d_hit_ind;
-					end
-					m_we = 1;
-					m_addr = d_addr[15:2];
-					case(d_addr[1:0])
-						2'b00: m_wr_data = {m_rd_data[63:16], wrt_data};
-						2'b01: m_wr_data = {m_rd_data[63:32], wrt_data, m_rd_data[15:0]};
-						2'b10: m_wr_data = {m_rd_data[63:48], wrt_data, m_rd_data[31:0]};
-						2'b11: m_wr_data = {wrt_data, m_rd_data[47:0]};
-					endcase
-					nextState = write_through;
-				end
+					//m_re = 1;
+					//m_addr = d_addr[15:2];
+				end					
 			end
+			
 			write_through: begin
 				freez = 1;
 				if(m_rdy == 0) begin
@@ -506,6 +518,64 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					nextState = normal;
 				end
 			end
+			
+			hdevict: begin
+				freez = 1;	
+				roll = 0;		
+				if(emptySlots_reg != 4'b1111) begin
+					v_we = 1;
+					v_wr_data = (lru_in == 0) ? {d_rd_line0[74:73], d_rd_line0[72:64], d_addr[6:2], d_rd_line0[63:0]} :
+												{d_rd_line1[74:73], d_rd_line1[72:64], d_addr[6:2], d_rd_line1[63:0]};
+					case(emptySlots_reg)
+						4'b0000: writeLineInd = 0;
+						4'b1000: writeLineInd = 1;
+						4'b1100: writeLineInd = 2;
+						4'b1110: writeLineInd = 3;
+						default: writeLineInd = 0;
+					endcase
+					d_we = 1;
+					dcache_wr_data = 0;
+					setOffset = d_hit_ind;
+					// invalidate D
+					nextState = normal;
+				end
+				else begin
+					if(v_dirty == 1) begin
+						if(m_rdy == 0) begin
+							m_we = 1;
+							m_wr_data = victimEv_data[63:0];
+							m_addr = victimEv_data[77:64];
+							nextState = devict;
+						end
+						else begin
+							v_we = 1;
+							v_wr_data = (lru_in == 0) ? {d_rd_line0[74:73], d_rd_line0[72:64], d_addr[6:2], d_rd_line0[63:0]} :
+														{d_rd_line1[74:73], d_rd_line1[72:64], d_addr[6:2], d_rd_line1[63:0]};
+							writeLineInd = evict_index;
+							m_addr = d_addr[15:2];
+							nextState = normal;
+							d_we = 1;
+					dcache_wr_data = 0;
+					setOffset = d_hit_ind;
+							// invalidate D
+						end
+					end
+					else begin
+						v_we = 1;
+						v_wr_data = (lru_in == 0) ? {d_rd_line0[74:73], d_rd_line0[72:64], d_addr[6:2], d_rd_line0[63:0]} :
+													{d_rd_line1[74:73], d_rd_line1[72:64], d_addr[6:2], d_rd_line1[63:0]};
+						writeLineInd = evict_index;
+						m_addr = d_addr[15:2];
+						nextState = normal;
+						d_we = 1;
+					dcache_wr_data = 0;
+					setOffset = d_hit_ind;
+						// invalidate D
+					end
+				end
+				
+			end
+			
 			/* Evict Routine */
 			ievict: begin
 				freez = 1;	
@@ -565,9 +635,13 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						4'b1110: writeLineInd = 3;
 						default: writeLineInd = 0;
 					endcase
-					nextState = dfetch;	
-					m_addr = d_addr[15:2];
-					m_re = 1;		
+					//if(wt == 1)
+					//	nextState = normal;
+					//else begin
+						nextState = dfetch;	
+						m_addr = d_addr[15:2];
+						m_re = 1;
+					//end
 				end
 				else begin
 					if(v_dirty == 1) begin
@@ -582,9 +656,13 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 							v_wr_data = (lru_in == 0) ? {d_rd_line0[74:73], d_rd_line0[72:64], d_addr[6:2], d_rd_line0[63:0]} :
 														{d_rd_line1[74:73], d_rd_line1[72:64], d_addr[6:2], d_rd_line1[63:0]};
 							writeLineInd = evict_index;
-							nextState = dfetch;
 							m_addr = d_addr[15:2];
-							m_re = 1;
+							//if(wt == 1)
+							//	nextState = normal;
+							//else begin
+								nextState = dfetch;								
+								m_re = 1;
+							//end
 						end
 					end
 					else begin
@@ -592,9 +670,13 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						v_wr_data = (lru_in == 0) ? {d_rd_line0[74:73], d_rd_line0[72:64], d_addr[6:2], d_rd_line0[63:0]} :
 													{d_rd_line1[74:73], d_rd_line1[72:64], d_addr[6:2], d_rd_line1[63:0]};
 						writeLineInd = evict_index;
-						nextState = dfetch;
 						m_addr = d_addr[15:2];
-						m_re = 1;
+						//if(wt == 1)
+						//	nextState = normal;
+						//else begin
+							nextState = dfetch;							
+							m_re = 1;
+						//end
 					end
 				end
 			end
@@ -612,8 +694,6 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					setOffset = (d_valid0 == 0) ? 1'b0 :
 								(d_valid1 == 0) ? 1'b1 :
 								lru_in;
-					//lru_we = 1;
-					//lru_out = setOffset;
 					dcache_wr_data = {2'b10, d_addr[15:7], m_rd_data};
 					nextState = normal;
 				end

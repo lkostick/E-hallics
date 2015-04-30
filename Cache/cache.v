@@ -130,7 +130,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		write_through=4'b0110,
 		hdevict = 4'b0111,
 		mem_write = 4'b1000,
-		spin = 4'b1001;
+		spin = 4'b1001,
+		itest = 4'b1010;
 	reg [3:0] state, nextState;
 	reg [3:0] emptySlots_reg;
 	always @(posedge clk/*, posedge rst*/) begin
@@ -242,7 +243,12 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 
 		case(state)
 			normal: begin
-				if(i_hitIn == 0 && wt == 0) begin
+				if(wt == 1) begin
+					freez = 1;
+					nextState = hDetect;
+					wt_sel = 1;
+				end
+				else if(i_hitIn == 0 && wt == 0) begin
 					if(v_hit_i == 0) begin
 						freez = 1;
 						if(i_valid == 0) begin
@@ -268,11 +274,6 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						icache_wr_data = {v_rd_data[79:78], v_rd_data[77:70], v_rd_data[63:0]};
 						nextState = spin;
 					end
-				end
-				else if (wt == 1) begin
-					freez = 1;
-					nextState = hDetect;
-					wt_sel = 1;
 				end
 				else if(re == 1) begin
 					if(d_hitIn == 1) begin
@@ -374,6 +375,39 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					nextState = normal;
 				end
 			end
+			// serve i cache miss
+			itest: begin
+				if(i_hitIn == 0 && wt == 0) begin
+					if(v_hit_i == 0) begin
+						freez = 1;
+						if(i_valid == 0) begin
+							m_re = 1;
+							nextState = ifetch;
+						end
+						else begin
+							nextState = ievict;
+							roll = 0;
+							m_addr = victimEv_data[77:64];
+							m_wr_data = victimEv_data[63:0];
+							if(v_dirty == 1) begin
+								m_we = 1;
+							end
+						end
+					end
+					else begin
+						i_output_sel = 1;
+						v_wr_data = {i_rd_data[73:72], i_rd_data[71:64], i_addr[7:2], i_rd_data[63:0]};					
+						writeLineInd = v_hit_line;
+						v_we = 1;
+						i_we = 1;
+						icache_wr_data = {v_rd_data[79:78], v_rd_data[77:70], v_rd_data[63:0]};
+						nextState = spin;
+					end
+				end
+				else begin
+					nextState = normal;
+				end
+			end
 			hDetect: begin
 				freez = 1;
 				wt_sel = 1;
@@ -459,8 +493,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					nextState = mem_write;					
 				end
 				else begin
-					freez = 0;
-					nextState = normal;
+					//freez = 0;
+					nextState = itest;
 				end
 			end
 			
@@ -477,7 +511,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 				end
 				else begin
 					freez = 0;
-					nextState = spin;
+					nextState = itest;
 					if(d_hitIn == 1) begin
 						d_we = 1;
 						dcache_wr_data = 0;

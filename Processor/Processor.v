@@ -28,7 +28,7 @@ module Processor(clk, rst, i_hit, instr, i_addr, d_hit, d_addr, Mem_re, Mem_we, 
 assign d_addr_pre = (~d_hit & (Mem_re | Mem_we))? d_addr : p0_EXMEM_in;
 	// IF
 	PC iPC(.clk(clk), .rst(rst), .i_hit(i_hit), .jump(J), .stall(PC_stall), .Mode(|Mode), .J_R(J_R), .PC(PC_in), .next_PC(i_addr));
-	Instr_MUX iMUX1(.i_hit(i_hit), .jump(J), .instr_i(instr), .instr_o(instr_out));
+	Instr_MUX iMUX1(.i_hit(i_hit), .jump(J | ~|Mode), .instr_i(instr), .instr_o(instr_out));
 
 	IF_ID iREG1(.clk(clk), .stall(IFID_stall), .instr_in(instr_out), .instr_out(instr_IFID_out), .PC_in(PC_in), .PC_out(PC_out), .jump_in(J), .jump_out(J_IFID_out));
 

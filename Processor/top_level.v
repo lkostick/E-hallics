@@ -1,9 +1,9 @@
 module top_level (input clk, rst, rxd, output txd);
 
 localparam RESERVED_AREA = 16'h1000;
-localparam Illegal_PC_Handler = 16'h0200;
+localparam Illegal_PC_Handler = 16'h0300;
 localparam Illegal_Register_Access_Handler = 16'h0200;
-localparam Illegal_Memory_Access_Handler = 16'h0200;
+localparam Illegal_Memory_Access_Handler = 16'h0400;
 localparam Spart_Handler = 16'h0030;
 
 

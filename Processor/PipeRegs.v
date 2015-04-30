@@ -8,8 +8,7 @@ module IF_ID(clk, stall, instr_in, instr_out, PC_in, PC_out, jump_in, jump_out);
 	always @(posedge clk) begin
 		if (stall) begin
 			PC_out <= PC_out;
-			if (instr_out[15:12] == 4'hc) instr_out <= 16'h0000;
-			else instr_out <= instr_out;
+			instr_out <= instr_out;
 			jump_out <= jump_out;
 		end
 		else begin

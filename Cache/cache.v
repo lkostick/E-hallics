@@ -478,6 +478,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						//invalidate dline and goto write directly
 						d_we = 1;
 						dcache_wr_data = 0;
+						setOffset = d_hit_ind;
 						m_re = 1;
 						m_addr = d_addr[15:2];
 						nextState = write_through;

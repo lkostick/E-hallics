@@ -25,6 +25,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 	wire [63:0] m_rd_data;
 	wire [5:0] i_wr_addr_sel = (i_we==1 && wt_sel == 0) ? i_addr[7:2] : 
 								wt_sel ? d_addr[7:2] : i_addr_pre[7:2];
+	wire [4:0] lru_addr = lru_we ? d_addr[7:2] : d_addr_pre[7:2];
 	wire [5:0] i_check = i_addr_pre[7:2];
 	wire [4:0] d_wr_addr_sel = d_we? d_addr[6:2] : d_addr_pre[6:2];
 	wire [3:0] emptySlots;
@@ -39,21 +40,21 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					.wea(we0), // input [0 : 0] wea
 					.addra(d_wr_addr_sel), // input [4 : 0] addra
 					.dina(dcache_wr_data), // input [74 : 0] dina
-					.douta(d_rd_line0) // output [74 : 0] douta
+					.douta(d_rd_line0),.ena(1) // output [74 : 0] douta
 				);
 	dcache_s0 dset1 (
 					.clka(clk), // input clka
 					.wea(we1), // input [0 : 0] wea
 					.addra(d_wr_addr_sel), // input [4 : 0] addra
 					.dina(dcache_wr_data), // input [74 : 0] dina
-					.douta(d_rd_line1) // output [74 : 0] douta
+					.douta(d_rd_line1),.ena(1) // output [74 : 0] douta
 				);
 	lru d_lru_set (
 				  .clka(clk), // input clka
 				  .wea(lru_we), // input [0 : 0] wea
-				  .addra(d_wr_addr_sel), // input [4 : 0] addra
+				  .addra(/*d_wr_addr_sel*/lru_addr), // input [4 : 0] addra
 				  .dina(lru_out), // input [0 : 0] dina
-				  .douta(lru_in) // output [0 : 0] douta
+				  .douta(lru_in),.ena(1) // output [0 : 0] douta
 				);
 						
 	icache icache_dt (
@@ -61,7 +62,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 				  .wea(i_we), // input [0 : 0] wea
 				  .addra(i_wr_addr_sel), // input [5 : 0] addra
 				  .dina(icache_wr_data), // input [73 : 0] dina
-				  .douta(i_rd_data) // output [73 : 0] douta
+				  .douta(i_rd_data),.ena(1) // output [73 : 0] douta
 				);
 	victim_buffer v_buffer(clk, rst, v_we, v_re, i_addr[15:2], 
 						d_addr[15:2], v_wr_data, writeLineInd, 

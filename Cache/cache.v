@@ -40,21 +40,21 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					.wea(we0), // input [0 : 0] wea
 					.addra(d_wr_addr_sel), // input [4 : 0] addra
 					.dina(dcache_wr_data), // input [74 : 0] dina
-					.douta(d_rd_line0),.ena(1) // output [74 : 0] douta
+					.douta(d_rd_line0) // output [74 : 0] douta
 				);
 	dcache_s0 dset1 (
 					.clka(clk), // input clka
 					.wea(we1), // input [0 : 0] wea
 					.addra(d_wr_addr_sel), // input [4 : 0] addra
 					.dina(dcache_wr_data), // input [74 : 0] dina
-					.douta(d_rd_line1),.ena(1) // output [74 : 0] douta
+					.douta(d_rd_line1) // output [74 : 0] douta
 				);
 	lru d_lru_set (
 				  .clka(clk), // input clka
 				  .wea(lru_we), // input [0 : 0] wea
 				  .addra(/*d_wr_addr_sel*/lru_addr), // input [4 : 0] addra
 				  .dina(lru_out), // input [0 : 0] dina
-				  .douta(lru_in),.ena(1) // output [0 : 0] douta
+				  .douta(lru_in) // output [0 : 0] douta
 				);
 						
 	icache icache_dt (
@@ -62,7 +62,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 				  .wea(i_we), // input [0 : 0] wea
 				  .addra(i_wr_addr_sel), // input [5 : 0] addra
 				  .dina(icache_wr_data), // input [73 : 0] dina
-				  .douta(i_rd_data),.ena(1) // output [73 : 0] douta
+				  .douta(i_rd_data) // output [73 : 0] douta
 				);
 	victim_buffer v_buffer(clk, rst, v_we, v_re, i_addr[15:2], 
 						d_addr[15:2], v_wr_data, writeLineInd, 
@@ -377,7 +377,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 			hDetect: begin
 				freez = 1;
 				wt_sel = 1;
-				if(i_hitIn == 1) begin
+				if(i_tag == d_addr[15:8]) begin
 					i_we = 1;
 					icache_wr_data = 0;
 				end
@@ -459,6 +459,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					nextState = mem_write;					
 				end
 				else begin
+					freez = 0;
 					nextState = normal;
 				end
 			end
@@ -475,7 +476,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					nextState = hdevict;
 				end
 				else begin
-					nextState = normal;
+					freez = 0;
+					nextState = spin;
 					if(d_hitIn == 1) begin
 						d_we = 1;
 						dcache_wr_data = 0;

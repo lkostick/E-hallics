@@ -459,7 +459,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					nextState = mem_write;					
 				end
 				else begin
-					freez = 0;
+					//freez = 1;
 					nextState = normal;
 				end
 			end

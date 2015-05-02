@@ -1,12 +1,17 @@
-module IF_ID(clk, stall, instr_in, instr_out, PC_in, PC_out, jump_in, jump_out);
+module IF_ID(clk, stall, flush, instr_in, instr_out, PC_in, PC_out, jump_in, jump_out);
 
-	input clk, stall, jump_in;
+	input clk, stall, jump_in, flush;
 	input [15:0] instr_in, PC_in;
 	output reg[15:0] instr_out, PC_out;
 	output reg jump_out;
 	
 	always @(posedge clk) begin
-		if (stall) begin
+		if (flush) begin
+			PC_out <= PC_in;
+			instr_out <= 0;
+			jump_out <= 0;
+		end
+		else if (stall) begin
 			PC_out <= PC_out;
 			instr_out <= instr_out;
 			jump_out <= jump_out;

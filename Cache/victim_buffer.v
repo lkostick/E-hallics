@@ -19,15 +19,16 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 module victim_buffer(clk, rst, we, re, addrIn_i, addrIn_d,  
-					 victimWrt_data, writeLineInd, victimRd_data, 
-					 hit_ind, hit_i, hit_d, victimIndex, emptySlots, roll, victimEv_data, ihit);	
+					 victimWrt_data, writeLineInd, victimRd_data_i, victimRd_data_d, 
+					 hit_ind_i, hit_ind_d, hit_i, hit_d, victimIndex, emptySlots, roll, victimEv_data, ihit);	
 	input clk, rst, we, re; // ovWrt is the swap flag
 	input [13:0] addrIn_i, addrIn_d;
 	input [79:0] victimWrt_data;
 	input [1:0] writeLineInd;
 	input roll, ihit;
-	output [79:0] victimRd_data; // {valid,dirty,addr[13:0],wdata[63:0]}
-	output [1:0] hit_ind;
+	//output [79:0] victimRd_data; // {valid,dirty,addr[13:0],wdata[63:0]}
+	output [79:0] victimRd_data_i, victimRd_data_d;
+	output [1:0] hit_ind_i, hit_ind_d;
 	output hit_i, hit_d;
 	output [1:0] victimIndex;
 	output [3:0] emptySlots;
@@ -103,7 +104,7 @@ module victim_buffer(clk, rst, we, re, addrIn_i, addrIn_d,
 	assign rd_data_i = rd_2;
 	assign rd_data_i = rd_3;
 	//assign victimRd_data = rd_data;
-	
+	assign victimRd_data_i = rd_data_i;
 	wand [79:0] rd_data_d;
 	wire [79:0] rd_00 = (mem[0][77:64] == addrIn_d && mem[0][79]==1) ? mem[0] : 80'bz;
 	wire [79:0] rd_11 = (mem[1][77:64] == addrIn_d && mem[1][79]==1) ? mem[1] : 80'bz;
@@ -113,8 +114,9 @@ module victim_buffer(clk, rst, we, re, addrIn_i, addrIn_d,
 	assign rd_data_d = rd_11;
 	assign rd_data_d = rd_22;
 	assign rd_data_d = rd_33;
-	assign victimRd_data = ihit ? rd_data_i : rd_data_d;
+	//assign victimRd_data = ihit ? rd_data_i : rd_data_d;
 	//assign victimRd_data = mem[0][77:64];
+	assign victimRd_data_d = rd_data_d;
 	
 	wand [79:0] evict_data;
 	wire [79:0] rd_4 = (evict_cntr == 0) ? mem[0] : 80'bz;
@@ -139,10 +141,10 @@ module victim_buffer(clk, rst, we, re, addrIn_i, addrIn_d,
 				   (mem[2][77:64] == addrIn_i && mem[2][79]==1) || 
 				   (mem[3][77:64] == addrIn_i && mem[3][79]==1)) ? 1 : 0;
 			wire hit_d = (
-					(mem[0][77:64] == addrIn_i && mem[0][79]==1)|| 
-				  (mem[1][77:64] == addrIn_i && mem[1][79]==1)|| 
-				   (mem[2][77:64] == addrIn_i && mem[2][79]==1) || 
-				   (mem[3][77:64] == addrIn_i && mem[3][79]==1)) ? 1 : 0;
+					(mem[0][77:64] == addrIn_d && mem[0][79]==1)|| 
+					(mem[1][77:64] == addrIn_d && mem[1][79]==1)|| 
+				   (mem[2][77:64] == addrIn_d && mem[2][79]==1)|| 
+				   (mem[3][77:64] == addrIn_d && mem[3][79]==1)) ? 1 : 0;
 					
 			//assign hit = ihit? hit_i : hit_d;
 			
@@ -156,6 +158,6 @@ module victim_buffer(clk, rst, we, re, addrIn_i, addrIn_d,
 					  (mem[1][77:64] == addrIn_d && mem[1][79]==1) ? 1 :
 					  (mem[2][77:64] == addrIn_d && mem[2][79]==1) ? 2 :
 					  (mem[3][77:64] == addrIn_d && mem[3][79]==1) ? 3 : 2'bx;
-			assign hit_ind = ihit ? hit_ind_i : hit_ind_d;
+			//assign hit_ind = ihit ? hit_ind_i : hit_ind_d;
 				
 endmodule

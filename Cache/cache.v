@@ -258,32 +258,11 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		//rstcntr = 0;
 
 		case(state)
-			/*
-			vexp: begin
-				freez = 1;
-				if(set0cntr != 2'b11) begin
-					v_we = 1;
-						v_wr_data=0;
-						writeLineInd = set0cntr;
-						nextState = vexp;
-				end
-				else begin
-				v_we = 1;
-						v_wr_data=0;
-						writeLineInd = set0cntr;
-					nextState = hDetect;
-					wt_sel = 1;
-				end
-			end
-			*/
-					
 			normal: begin
 				if(wt == 1) begin
 					freez = 1;
 					nextState = hDetect;
-					//nextState = vexp;
 					wt_sel = 1;
-					//rstcntr = 1;
 				end
 				else if(i_hitIn == 0 && wt == 0) begin
 					if(v_hit_i == 0) begin
@@ -343,7 +322,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						end
 						else begin
 							d_output_sel = 1;
-							if(~lru_in == 0) begin
+							if(lru_out == 0) begin
 								v_wr_data = {d_rd_line0[74:73], d_rd_line0[72:64], d_addr[6:2], d_rd_line0[63:0]};
 							end
 							else begin
@@ -351,7 +330,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 							end
 							v_we = 1;
 							writeLineInd = v_hit_line_d;
-							setOffset = ~lru_in;
+							setOffset = lru_out;
 							d_we = 1;
 							nextState = spin;
 						end
@@ -393,7 +372,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						end
 						else begin
 							w_output_sel = 1;
-							if(~lru_in == 0) begin
+							if(lru_out == 0) begin
 								v_wr_data = {d_rd_line0[74:73], d_rd_line0[72:64], d_addr[6:2], d_rd_line0[63:0]};
 							end
 							else begin
@@ -402,7 +381,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 							v_we = 1;
 							d_we = 1;
 							writeLineInd = v_hit_line_d;
-							setOffset = ~lru_in;
+							setOffset = lru_out;
 							dcache_wr_data = {2'b11, v_rd_data_d[77:69], replacement};
 							nextState = spin;
 						end
@@ -583,9 +562,21 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					v_wr_data = {i_rd_data[73:72], i_rd_data[71:64], i_addr[7:2], i_rd_data[63:0]};
 					case(emptySlots_reg)
 						4'b0000: writeLineInd = 0;
+						4'b0001: writeLineInd = 0;
+						4'b0010: writeLineInd = 0;
+						4'b0011: writeLineInd = 0;
+						4'b0100: writeLineInd = 0;
+						4'b0101: writeLineInd = 0;
+						4'b0110: writeLineInd = 0;
+						4'b0111: writeLineInd = 0;
 						4'b1000: writeLineInd = 1;
+						4'b1001: writeLineInd = 1;
+						4'b1010: writeLineInd = 1;
+						4'b1011: writeLineInd = 1;
 						4'b1100: writeLineInd = 2;
+						4'b1101: writeLineInd = 2;
 						4'b1110: writeLineInd = 3;
+						//4'b0000: writeLineInd = 0;
 						default: writeLineInd = 0;
 					endcase
 					nextState = ifetch;	
@@ -635,9 +626,21 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 												{d_rd_line1[74:73], d_rd_line1[72:64], d_addr[6:2], d_rd_line1[63:0]};
 					case(emptySlots_reg)
 						4'b0000: writeLineInd = 0;
+						4'b0001: writeLineInd = 0;
+						4'b0010: writeLineInd = 0;
+						4'b0011: writeLineInd = 0;
+						4'b0100: writeLineInd = 0;
+						4'b0101: writeLineInd = 0;
+						4'b0110: writeLineInd = 0;
+						4'b0111: writeLineInd = 0;
 						4'b1000: writeLineInd = 1;
+						4'b1001: writeLineInd = 1;
+						4'b1010: writeLineInd = 1;
+						4'b1011: writeLineInd = 1;
 						4'b1100: writeLineInd = 2;
+						4'b1101: writeLineInd = 2;
 						4'b1110: writeLineInd = 3;
+						//4'b0000: writeLineInd = 0;
 						default: writeLineInd = 0;
 					endcase
 					nextState = dfetch;	

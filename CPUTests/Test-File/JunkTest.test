@@ -1,6 +1,7 @@
 @0100
 		LL R1, 0x55
 		LL R2, 0x33
+		LH R2, 0x01
 		LL Ra, 0x01
 		LL Rb, 0x01
 		ADD R3, R2, R1		# (should be 0x88)	

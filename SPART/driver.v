@@ -1,4 +1,4 @@
-module spart(input clk, input rst, output full, input send, input [7:0] data_in, output reg RCV, input [2:0] addr, output [15:0] data_out, output txd, input rxd);
+module spart(input clk, output full, input send, input [7:0] data_in, output reg RCV, input [2:0] addr, output [15:0] data_out, output txd, input rxd);
 
 	localparam BAUD_RATE = 8'ha2;
 	
@@ -8,7 +8,7 @@ module spart(input clk, input rst, output full, input send, input [7:0] data_in,
 	reg [3:0] data_buffer[0:15];
 	reg [7:0] Baud_Rate;
 
-	FIFO iDUT(.clk(clk), .srst(rst), .din(data_in), .wr_en(send), .rd_en(rd_en), .dout(send_data), .full(full), .empty(empty));
+	FIFO iDUT(.clk(clk), .din(data_in), .wr_en(send), .rd_en(rd_en), .dout(send_data), .full(full), .empty(empty));
 
 	Transmit iTRAN(.TxD(txd), .TBR(tbr), .DATA(send_data), .clk(clk), .Enable(~|Baud_Rate), .write(write));
 

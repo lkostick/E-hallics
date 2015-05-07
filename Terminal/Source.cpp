@@ -50,11 +50,14 @@ int main()
 					if (flag == 0) {
 						ReadFile(program, &byte, 1, &read, 0);
 						if (byte != 10) {
-							if (byte == '@')
-							for (int i = 0; i < 4; i++) {
-								ReadFile(program, &byte, 1, &read, 0);
-								addr += ((byte <= '9') ? byte - '0' : (byte < 'a') ? byte - 'A' + 10 : byte - 'a' + 10);
-								if (i != 3) addr *= 16;
+							if (byte == '@') {
+								addr = 0;
+								for (int i = 0; i < 4; i++) {
+									ReadFile(program, &byte, 1, &read, 0);
+									addr += ((byte <= '9') ? byte - '0' : (byte < 'a') ? byte - 'A' + 10 : byte - 'a' + 10);
+									if (i != 3) addr *= 16;
+								}
+								//cout << addr << endl;
 							}
 							else {
 								for (int i = 0; i < 4; i++) {
@@ -65,7 +68,7 @@ int main()
 							}
 						}
 					}
-					Sleep(5);
+					Sleep(7);
 				}
 				CloseHandle(program);
 			}
@@ -83,6 +86,16 @@ int main()
 				}
 			}
 			if (error == 0) flag = 3;
+		}
+		else if (command.compare("getblock") == 0) {
+			for (int i = 0; i < 200; i++) {
+				while (flag != 0) Sleep(5);
+				pc[3] = (i>9) ? ((i % 16 > 9) ? ('a'+i%16-10):('0'+i%16) ):('0' + i);
+				pc[2] = (i/16 > 9)?((i/16-10)+'a'): ('0'+i/16);
+				pc[1] = '0';
+				pc[0] = '1';
+				flag = 3;
+			}
 		}
 		else if (command.compare("store") == 0) {
 			error = 0;
@@ -114,6 +127,33 @@ int main()
 			}
 			if (error == 0)
 				flag = 2;
+		}
+		else if (command.compare("wakeup") == 0) {
+			flag = 4;
+		}
+		else if (command.compare("loadtext") == 0){
+			cin >> filename;
+			addr = 0x3010;
+			HANDLE program = CreateFile(TEXT(filename), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (program == INVALID_HANDLE_VALUE) {
+				cerr << "Can not open file: " << filename << endl;
+			}
+			else {
+				char byte;
+				DWORD read = 1;
+				for (int i = 0; i < 16; i++) {
+					if (flag == 0) {
+						for (int j = 0; j < 4; j++){
+							ReadFile(program, &byte, 1, &read, 0);
+							data[j] = (byte <= '9') ? byte - '0' : (byte < 'a') ? byte - 'A' + 10 : byte - 'a' + 10;
+							flag = 2;
+						}
+						Sleep(7);
+					}
+					else i--;
+				}
+			}
+			CloseHandle(program);
 		}
 		else {
 			cerr << "Unknown command" << endl;
@@ -199,9 +239,20 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 					cout << "> ";
 					new_line = 0;
 				}
+				if (reg_count < 0) {
+					cout << endl << "> Something is wrong, reset terminal" << endl;
+					reg_flag = 1;
+					reg_count = 0;
+				}
 				if ((int)byte == -1 && reg_count == 0) {
-					reg_flag = -reg_flag;
+					if (reg_flag ==-1) reg_flag = 1;
+					else reg_flag = -1;
 					if (reg_flag == -1) reg_count = 2;
+				}
+				else if ((int)byte == -2 && reg_count == 0){
+					if ( reg_flag == -2)  reg_flag = 1;
+					else reg_flag = -2;
+					if (reg_flag == -2) reg_count = 2;
 				}
 				else if(reg_flag ==1) {
 					if ((int)byte == 13)
@@ -211,13 +262,24 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 					}
 					else cout << byte;
 				}
-				else
+				else if (reg_flag == -1)
 				{
 					if ((int)byte < 0)
 						trans = (int)byte + 256;
 					else
 						trans = (int)byte;
 					cout << HEX[trans / 16] << HEX[trans % 16];
+					reg_count--;
+				}
+				else {
+					if (reg_count == 2)
+						trans = ((int)byte < 0) ? (int)byte + 256 : (int)byte;
+					else {
+						trans *= 256;
+						trans += ((int)byte < 0) ? (int)byte + 256 : (int)byte;
+					}
+					if (trans > 32767) trans -= 65536;
+					if (reg_count == 1) cout << trans;
 					reg_count--;
 				}
 			}
@@ -317,6 +379,21 @@ DWORD WINAPI SerialCOMMREAD(LPVOID lpParam)
 						break;
 					default: cout << "Wrong address!" << endl;
 				}
+				if (!WriteFile(hSerial, &bytes, 1, &byteWritten, 0))
+				{
+					cerr << "Error in sending data" << endl;
+					CloseHandle(hSerial);
+					return -1;
+				}
+			}
+			flag = 0;
+		}
+		else if (flag == 4) {
+			for (int i = 0; i < 2; i++) {
+				if (i == 0)
+					bytes = 3;
+				else bytes = 15 * 16;
+
 				if (!WriteFile(hSerial, &bytes, 1, &byteWritten, 0))
 				{
 					cerr << "Error in sending data" << endl;

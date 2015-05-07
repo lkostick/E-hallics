@@ -62,3 +62,12 @@ Expression:
 	2. support &&, || and ! for logical operation
 	3. support <, >, <=, >=, == and != relation operation
 	4. special instruction "__overflow" for detecting overflow
+
+Special function:
+
+	1. __set_print_format(<__print_HEX or __print_DEC>);
+	2. __accelerator_reset;
+	3. __accelerator_start;
+	4. __accelerator_stop;
+	5. __accelerator_send_text(<data>, <addr>);
+	6. __accelerator_get_performance(<level>);

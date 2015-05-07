@@ -136,7 +136,72 @@ return new Symbol(sym.EOF);
 			CharNum.num += yytext().length();
 			return S;
 		  }
-          
+
+"__sleep" { Symbol S = new Symbol(sym.SLEEP, new TokenVal(yyline+1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
+"__interrupt_lock"
+		  { Symbol S = new Symbol(sym.ACQUIRELOCK, new TokenVal(yyline+1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
+"__interrupt_unlock"
+		  { Symbol S = new Symbol(sym.RELEASELOCK, new TokenVal(yyline+1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
+"__accelerator_start"
+		  { Symbol S = new Symbol(sym.ACCELERATOR_START, new TokenVal(yyline + 1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
+"__accelerator_reset"
+		  { Symbol S = new Symbol(sym.ACCELERATOR_RESET, new TokenVal(yyline + 1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
+"__accelerator_send_text"
+		  { Symbol S = new Symbol(sym.ACCELERATOR_TEXT, new TokenVal(yyline + 1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
+"__accelerator_get_performance"
+		  { Symbol S = new Symbol(sym.ACCELERATOR_PERFORMANCE, new TokenVal(yyline + 1, CharNum.num));
+			CharNum.num += yytext().length();
+			return S;
+		  }
+
+"__accelerator_stop"
+		 { Symbol S = new Symbol(sym.ACCELERATOR_STOP, new TokenVal(yyline + 1, CharNum.num));
+		   CharNum.num += yytext().length();
+		   return S;
+		 }
+
+"__set_print_format"
+		 { Symbol S = new Symbol(sym.SETPRINTFORMAT, new TokenVal(yyline + 1, CharNum.num));
+		   CharNum.num += yytext().length();
+		   return S;
+		 }
+
+"__print_HEX"
+		{ Symbol S = new Symbol(sym.HEXFORMAT, new TokenVal(yyline + 1, CharNum.num));
+		  CharNum.num += yytext().length();
+		  return S;
+		}
+
+"__print_DEC"
+		{ Symbol S = new Symbol(sym.DECFORMAT, new TokenVal(yyline + 1, CharNum.num));
+		  CharNum.num += yytext().length();
+		  return S;
+		}
+
 "endl"    { //String literal for new line
 	        Symbol S = new Symbol(sym.STRINGLITERAL,
 					         new StrLitTokenVal(yyline+1, CharNum.num, "\"\\n\""));

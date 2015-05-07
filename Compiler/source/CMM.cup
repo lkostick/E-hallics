@@ -67,7 +67,17 @@ terminal				MINUSASSIGN;
 terminal				FOR;
 terminal                LBRACKET;
 terminal				RBRACKET;
-
+terminal				SLEEP;
+terminal				ACQUIRELOCK;
+terminal				RELEASELOCK;
+terminal				ACCELERATOR_START;
+terminal				ACCELERATOR_TEXT;
+terminal				ACCELERATOR_RESET;
+terminal				ACCELERATOR_PERFORMANCE;
+terminal				ACCELERATOR_STOP;
+terminal				SETPRINTFORMAT;
+terminal				HEXFORMAT;
+terminal				DECFORMAT;
 /* Nonterminals
  *
  * NOTE: You will need to add more nonterminals to this list as you
@@ -327,6 +337,33 @@ stmt            ::= assignExp:ae SEMICOLON
 				| fncall:f SEMICOLON
 				{: RESULT = new CallStmtNode(f);
 				:}
+				| SLEEP:s SEMICOLON
+				{: RESULT = new SleepNode();
+				:}
+				| ACQUIRELOCK:a SEMICOLON
+				{: RESULT = new AcquireLockNode();
+				:}
+				| RELEASELOCK:r SEMICOLON
+				{: RESULT = new ReleaseLockNode();
+				:}
+				| ACCELERATOR_START SEMICOLON
+				{: RESULT = new AcceleratorStartNode();
+				:}
+				| ACCELERATOR_RESET SEMICOLON
+				{: RESULT = new AcceleratorResetNode();
+				:}
+				| ACCELERATOR_TEXT LPAREN exp:e1 COMMA INTLITERAL:e2 RPAREN SEMICOLON
+				{: RESULT = new AcceleratorTextNode(e1, new IntLitNode(e2.linenum, e2.charnum, e2.intVal));
+				:}
+				| ACCELERATOR_STOP SEMICOLON
+				{: RESULT = new AcceleratorStopNode();
+				:}
+				| SETPRINTFORMAT LPAREN HEXFORMAT RPAREN SEMICOLON
+				{: RESULT = new SetPrintFormatHEX();
+				:}
+				| SETPRINTFORMAT LPAREN DECFORMAT RPAREN SEMICOLON
+				{: RESULT = new SetPrintFormatDEC();
+				:}
                 ;				
 
 assignExp       ::= loc:lc ASSIGN exp:e
@@ -394,6 +431,9 @@ exp             ::= assignExp:ae
                 :}
 				| OVERFLOW:o
 				{: RESULT = new OverFlowNode(o.linenum, o.charnum);
+				:}
+				| ACCELERATOR_PERFORMANCE LPAREN INTLITERAL:i RPAREN
+				{: RESULT = new AcceleratorPerformanceNode(i.linenum, i.charnum, i.intVal);
 				:}
                 ;	
 				

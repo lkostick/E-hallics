@@ -1,6 +1,6 @@
 module spart(input clk, output full, input send, input [7:0] data_in, output reg RCV, input [2:0] addr, output [15:0] data_out, output txd, input rxd);
 
-	localparam BAUD_RATE = 8'ha2;
+	localparam BAUD_RATE = 8'h50;
 	
    wire empty, rda, tbr;
 	reg rd_en, write;

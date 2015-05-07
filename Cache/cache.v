@@ -276,7 +276,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 							roll = 0;
 							m_addr = victimEv_data[77:64];
 							m_wr_data = victimEv_data[63:0];
-							if(v_dirty_i == 1) begin
+							if(v_dirty_i == 1 && emptySlots_reg == 4'b1111) begin
 								m_we = 1;
 							end
 						end
@@ -315,7 +315,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 								roll = 0;
 								m_wr_data = victimEv_data[63:0];
 								m_addr = victimEv_data[77:64];
-								if(v_dirty_d == 1) begin
+								if(v_dirty_d == 1 && emptySlots_reg == 4'b1111) begin
 									m_we = 1;
 								end
 							end
@@ -365,7 +365,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 								roll = 0;
 								m_wr_data = victimEv_data[63:0];
 								m_addr = victimEv_data[77:64];
-								if(v_dirty_d == 1) begin
+								if(v_dirty_d == 1 && emptySlots_reg == 4'b1111) begin
 									m_we = 1;
 								end
 							end

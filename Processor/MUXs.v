@@ -38,10 +38,12 @@ always @(*)
 	endcase
 endmodule
 
-module Memory_MUX(input sel, input [15:0]  alu, input [15:0] mem, output reg [15:0] data);
+module Memory_MUX(input[1:0] sel, input [15:0]  alu, input [15:0] mem, input [15:0] Acc, output reg [15:0] data);
 always @(*)
-	if (sel)
+	if (sel == 1)
 		data = mem;
+	else if (sel == 2)
+		data = Acc;
 	else
 		data = alu;
 endmodule

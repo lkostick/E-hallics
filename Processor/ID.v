@@ -1,4 +1,4 @@
-module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, Mem_sel, output reg [1:0] Mode_Set, input [1:0] Mode, output reg Bad_Instr, output reg send_sel, output reg send, output reg [2:0] spart_addr, output reg wt);
+module ID(input [15:0] instr, output reg we, p1_sel, output reg[3:0] p0_addr, p1_addr, dst_addr, output reg [2:0] Alu_Op, output reg [7:0] Imme, output reg[1:0] Updateflag, output reg jump, output reg[15:0] new_PC, branch_PC, input [15:0] i_addr, output reg[2:0] condition, output reg taken, output reg J_sel, output reg [1:0] source_sel, output reg Mem_re, Mem_we, output reg [1:0] Mode_Set, Mem_sel, input [1:0] Mode, output reg Bad_Instr, output reg send_sel, output reg send, output reg [2:0] spart_addr, output reg wt, output reg [1:0] Accelerator_mode, output reg[4:0] Accelerator_addr, output reg Accelerator_rst);
 
 // Opcode of instruction
 localparam ADD = 4'h0;
@@ -47,6 +47,10 @@ always @(*) begin
 	p0_re = 0;
 	p1_re = 0;
 	wt = 0;
+	Accelerator_mode = 0; //do nothing
+	Accelerator_addr = 0;
+	Accelerator_rst = 0; // not reset
+	
 	case (instr[15:12])
 		ADD: begin
 			p0_addr = instr[7:4];
@@ -191,6 +195,16 @@ always @(*) begin
 		end
 		SET: begin
 			Mode_Set = instr[11:10];
+		end
+		CTRL: begin
+			Accelerator_mode = (&instr[7:6]&instr[4:0])? 0 : instr[7:6];
+			Accelerator_addr = instr[4:0];
+			Accelerator_rst = &instr[7:6]&instr[4:0]; // stop and addr = 11111 reset accelerator
+			p0_addr = instr[11:8];
+			dst_addr = instr[11:8];
+			we = (instr[7:6] ==2'b10)? 1 : 0; // read
+			p0_re = (instr[7:6]==2'b01 && instr[4] != 1)? 1 : 0;
+			Mem_sel = 2;
 		end
 		default:
 			we = 0;

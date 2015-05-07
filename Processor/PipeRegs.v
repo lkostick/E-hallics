@@ -24,7 +24,13 @@ module IF_ID(clk, stall, flush, instr_in, instr_out, PC_in, PC_out, jump_in, jum
 	end
 endmodule
 
-module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_in, we_out, dst_addr_in, dst_addr_out, Updateflag_in, Updateflag_out, p0_in, p0_out, p1_in, p1_out, condition_in, condition_out, taken_in, taken_out, branch_PC_in, branch_PC_out, source_sel_in, source_sel_out, Mem_re_in, Mem_re_out, Mem_we_in, Mem_we_out, Mem_sel_in, Mem_sel_out, p0_addr_in, p0_addr_out, p1_addr_in, p1_addr_out, Mode_in, Mode_out, send_sel_in, send_sel_out, send_in, send_out, spart_addr_in, spart_addr_out, i_addr, wt_in, wt_out);
+module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_in, we_out,
+	dst_addr_in, dst_addr_out, Updateflag_in, Updateflag_out, p0_in, p0_out, p1_in, p1_out,
+	condition_in, condition_out, taken_in, taken_out, branch_PC_in, branch_PC_out, source_sel_in,
+	source_sel_out, Mem_re_in, Mem_re_out, Mem_we_in, Mem_we_out, Mem_sel_in, Mem_sel_out, p0_addr_in,
+	p0_addr_out, p1_addr_in, p1_addr_out, Mode_in, Mode_out, send_sel_in, send_sel_out, send_in, send_out, 
+	spart_addr_in, spart_addr_out, i_addr, wt_in, wt_out, Accelerator_mode_in, Accelerator_mode_out,
+	Accelerator_addr_in, Accelerator_addr_out, Accelerator_rst_in, Accelerator_rst_out);
 
 	input clk, we_in, stall, flush, full, store_current;
 	input [3:0] dst_addr_in;
@@ -42,10 +48,10 @@ module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_i
 	output reg taken_out;
 	input [15:0] branch_PC_in;
 	output reg[15:0] branch_PC_out;
-	input [1:0] source_sel_in;
-	output reg [1:0] source_sel_out;
-	input Mem_re_in, Mem_we_in, Mem_sel_in;
-	output reg Mem_re_out, Mem_we_out, Mem_sel_out;
+	input [1:0] source_sel_in, Mem_sel_in;
+	output reg [1:0] source_sel_out, Mem_sel_out;
+	input Mem_re_in, Mem_we_in;
+	output reg Mem_re_out, Mem_we_out;
 	input [3:0] p0_addr_in, p1_addr_in;
 	output reg [3:0] p0_addr_out, p1_addr_out;
 	input [1:0] Mode_in;
@@ -54,6 +60,12 @@ module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_i
 	output reg send_sel_out, send_out, wt_out;
 	input [2:0] spart_addr_in;
 	output reg [2:0] spart_addr_out;
+	input [1:0] Accelerator_mode_in;
+	output reg[1:0] Accelerator_mode_out;
+	input [4:0] Accelerator_addr_in;
+	output reg[4:0] Accelerator_addr_out;
+	input Accelerator_rst_in;
+	output reg Accelerator_rst_out;
 
 	always @(posedge clk) begin
 		if (flush) begin
@@ -77,6 +89,9 @@ module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_i
 			Mode_out <= Mode_in;
 			spart_addr_out <= 0;
 			wt_out <= 0;
+			Accelerator_mode_out <= 0;
+			Accelerator_addr_out <= 0;
+			Accelerator_rst_out <= 0;
 		end
 		else if (stall) begin
 			Alu_Op_out <= Alu_Op_out;
@@ -99,6 +114,16 @@ module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_i
 			Mode_out <= Mode_in;
 			spart_addr_out <= spart_addr_out;
 			wt_out <= wt_in;
+			if (Accelerator_mode_out == 2'b01 && Accelerator_addr_out == 5'h1f) begin
+				Accelerator_mode_out <= 0;
+				Accelerator_addr_out <= 0;
+				Accelerator_rst_out <= 0;
+			end
+			else begin
+				Accelerator_mode_out <= Accelerator_mode_out;
+				Accelerator_addr_out <= Accelerator_addr_out;
+				Accelerator_rst_out <= Accelerator_rst_out;
+			end
 		end
 		else if (store_current) begin
 			Alu_Op_out <= Alu_Op_in;
@@ -121,6 +146,9 @@ module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_i
 			Mode_out <= Mode_in;
 			spart_addr_out <= 0;
 			wt_out <= 0;
+			Accelerator_mode_out <= 0;
+			Accelerator_addr_out <= 0;
+			Accelerator_rst_out <= 0;
 		end
 		else begin
 			Alu_Op_out <= Alu_Op_in;
@@ -143,30 +171,35 @@ module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_i
 			Mode_out <= Mode_in;
 			spart_addr_out <= spart_addr_in;
 			wt_out <= wt_in;
+			Accelerator_mode_out <= Accelerator_mode_in;
+			Accelerator_addr_out <= Accelerator_addr_in;
+			Accelerator_rst_out <= Accelerator_rst_in;
 		end
 	end
 endmodule
 
-module EX_MEM(clk, stall, alu_in, alu_out, we_in, we_out, dst_addr_in, dst_addr_out, Mem_re_in, Mem_re_out, Mem_we_in, Mem_we_out, Mem_sel_in, Mem_sel_out, d_addr_in, d_addr_out, wrt_data_in, wrt_data_out, wt_in, wt_out);
-	input clk, we_in, stall;
+module EX_MEM(clk, stall, accelerator_stall, alu_in, alu_out, we_in, we_out, dst_addr_in, dst_addr_out, Mem_re_in, Mem_re_out, Mem_we_in, Mem_we_out, Mem_sel_in, Mem_sel_out, d_addr_in, d_addr_out, wrt_data_in, wrt_data_out, wt_in, wt_out);
+	input clk, we_in, stall, accelerator_stall;
 	output reg we_out;
 	input [3:0] dst_addr_in;
 	output reg[3:0] dst_addr_out;
 	input [15:0] alu_in;
 	output reg[15:0] alu_out;
-	input Mem_re_in, Mem_we_in, Mem_sel_in, wt_in;
-	output reg Mem_re_out, Mem_we_out, Mem_sel_out, wt_out;
+	input Mem_re_in, Mem_we_in, wt_in;
+	output reg Mem_re_out, Mem_we_out, wt_out;
 	input [15:0] d_addr_in, wrt_data_in;
 	output reg [15:0] d_addr_out, wrt_data_out;
+	input [1:0] Mem_sel_in;
+	output reg [1:0] Mem_sel_out;
 
 	always @(posedge clk) begin
 		if (stall) begin
-			we_out <= we_out;
+			we_out <= (Mem_sel_out[1] & ~accelerator_stall)? 0 : we_out;
 			dst_addr_out <=dst_addr_out;
 			alu_out <= alu_out;
 			Mem_re_out <= Mem_re_out;
 			Mem_we_out <= Mem_we_out;
-			Mem_sel_out <= Mem_sel_out;
+			Mem_sel_out <= (Mem_sel_out[1] & ~accelerator_stall)? 0 : Mem_sel_out;
 			d_addr_out <= d_addr_out;
 			wrt_data_out <= wrt_data_out;
 			wt_out <= wt_in;

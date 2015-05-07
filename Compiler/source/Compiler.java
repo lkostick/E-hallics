@@ -17,6 +17,7 @@ public class Compiler {
 	private PrintWriter outFile;
 	private static PrintStream outStream = System.err;
 	
+	private int startPosition = 0x1000; // default
 	public static final int RESULT_CORRECT = 0;
 	public static final int RESULT_SYNTAX_ERROR = 1;
 	public static final int RESULT_TYPE_ERROR = 2;
@@ -34,6 +35,9 @@ public class Compiler {
         	pukeAndDie(msg);
         }
 		
+		if (args.length == 3) {
+			startPosition = Integer.valueOf(args[2], 16);
+		}
 		try{
 			setInfile(args[0]);
 			setOutfile(args[1]);
@@ -142,7 +146,7 @@ public class Compiler {
 		if (ErrMsg.getErr()) {
 			return Compiler.RESULT_TYPE_ERROR;
 		}
-		astRoot.codeGen(outFile);
+		astRoot.codeGen(outFile, startPosition);
 		//astRoot.unparse(outFile, 0);
 		return Compiler.RESULT_CORRECT;
 	}

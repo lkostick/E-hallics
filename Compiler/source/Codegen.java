@@ -34,6 +34,11 @@ public class Codegen {
 	// values of Print address
 	public static int Print_Int = -1;
 	public static int Print_Str = -1;
+	
+	public static int Sleep_addr = -1;
+	public static int Interrupt_lock = -1;
+	public static int Print_Format = -1;
+	public static int Out_Of_Range = -1;
 
     // values of true and false
     public static final String TRUE = "1";

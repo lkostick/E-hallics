@@ -37,32 +37,56 @@ class ProgramNode extends ASTnode {
 		}
     }
 
-	public void codeGen(PrintWriter outFile) {
+	public void codeGen(PrintWriter outFile, int Start_Position) {
+		int start_position = Start_Position;
+		Codegen.Sleep_addr = start_position + 6;
+		Codegen.Interrupt_lock = start_position + 7;
+		Codegen.Print_Format = start_position + 8;
+
 		Codegen.p = outFile;
 		Codegen.strLiteral = new HashMap<String, String>();
 		Codegen.strLabel = new LinkedList<String>();
 		Codegen.labelSize = new HashMap<String, String>();
 		String Out_of_Range = Codegen.nextLabel(); //__L0
 
-		int start_position = 0x1000;
-		Codegen.generateWithComment("@"+Integer.toString(start_position,16), "Program Store Position");
+
+		String start_position_HEX;
+		if (Integer.toString(start_position,16).length() == 0)
+			start_position_HEX = "0000";
+		else if (Integer.toString(start_position,16).length() == 1)
+			start_position_HEX = "000";
+		else if (Integer.toString(start_position, 16).length() == 2)
+			start_position_HEX = "00";
+		else if (Integer.toString(start_position, 16).length() == 3)
+			start_position_HEX = "0";
+		else
+			start_position_HEX ="";
+		Codegen.generateWithComment("@"+start_position_HEX + Integer.toString(start_position,16), "Program Store Position");
 		Codegen.generateWithComment("","Set SP and FP pointer");
 		Codegen.generateWithComment("ll","", Codegen.SP, "0");
 		Codegen.generateWithComment("lh", "", Codegen.SP, "0x"+Integer.toString(0x40+start_position/256,16));
 		Codegen.generateWithComment("addi", "", Codegen.FP, Codegen.SP, "0x0");
 		Codegen.generateWithComment("la", "Get Main Position", Codegen.T0, "main");
 		Codegen.generateWithComment("jr", "Start Program", Codegen.T0);
+		Codegen.generateWithComment("\\0000", "Position for Sleep_addr");
+		Codegen.generateWithComment("\\0000", "Position for Interrupt_Lock");
+		Codegen.generateWithComment("\\00fe", "Position for Print_format");
+		Codegen.generateWithComment("\\0000", "Position for Stack Pointer");
+		Codegen.generateWithComment("\\0000", "Position for Frame Pointer");
 
 		// Function for printing
-		Codegen.Print_Int = start_position + 6;
+		Codegen.Print_Int = start_position + 11;
 		Codegen.generateWithComment("", "Print Int or Bool");
-		Codegen.generateWithComment("send", "", "0xff");
-		Codegen.generateWithComment("send", "", Codegen.A0, "low");
+		Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Print_Format % 256));
+		Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Print_Format / 256));
+		Codegen.generateWithComment("ld", "", Codegen.T1, Codegen.T0);
+		Codegen.generateWithComment("send", "", Codegen.T1, "low");
 		Codegen.generateWithComment("send", "", Codegen.A0, "high");
-		Codegen.generateWithComment("send", "", "0xff");
+		Codegen.generateWithComment("send", "", Codegen.A0, "low");
+		Codegen.generateWithComment("send", "", Codegen.T1, "low");
 		Codegen.generateWithComment("jr", "", Codegen.RA);
 
-		Codegen.Print_Str = start_position + 11;
+		Codegen.Print_Str = start_position + 19;
 		String __start= Codegen.nextLabel();
 		String __end= Codegen.nextLabel();
 		Codegen.generateWithComment("ll", "ASCII value of \"", Codegen.T0, "0xff");
@@ -82,6 +106,22 @@ class ProgramNode extends ASTnode {
 		Codegen.generateWithComment("b", "", "uncond", __start);
 		Codegen.genLabel(__end);
 		Codegen.generateWithComment("jr", "", Codegen.RA);
+
+		String not_out_of_range = Codegen.nextLabel();
+		Codegen.Out_Of_Range = start_position + 34;
+		Codegen.genPop(Codegen.T0); // range
+		Codegen.genPop(Codegen.T1); // Offset
+		Codegen.generateWithComment("sub", "", Codegen.T2, Codegen.T1, Codegen.T0);
+		Codegen.generateWithComment("b", "", "lt", not_out_of_range);
+		Codegen.generateWithComment("la", "", Codegen.A0, Out_of_Range);
+		Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Print_Str % 256));
+		Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Print_Str / 256));
+		Codegen.generateWithComment("la", "", Codegen.RA, "_main_Exit");
+		Codegen.generateWithComment("jr", "", Codegen.T0);
+		Codegen.genLabel(not_out_of_range);
+		Codegen.genPush(Codegen.T1); // push back offset
+		Codegen.generateWithComment("jr", "", Codegen.RA);
+		
 
 
 		myDeclList.codeGen();
@@ -1288,16 +1328,21 @@ class ForStmtNode extends StmtNode {
 	public void codeGen(String fnName) {
 		String __start = Codegen.nextLabel();
 		String __end   = Codegen.nextLabel();
+		String __not_jump_end = Codegen.nextLabel();
 		if (myInit != null)
 			myInit.codeGen();
 		Codegen.genLabel(__start);
 		myCond.codeGen();
 		Codegen.genPop(Codegen.T0);
 		Codegen.generateWithComment("xor", "", Codegen.T0, Codegen.T0, "R0");
-		Codegen.generateWithComment("b","", "eq", __end);
+		Codegen.generateWithComment("la", "", Codegen.T0, __end);
+		Codegen.generateWithComment("b","", "neq", __not_jump_end);
+		Codegen.generateWithComment("jr", "", Codegen.T0);
+		Codegen.genLabel(__not_jump_end);
 		myStmtList.codeGen(fnName);
 		if (myInc != null) myInc.codeGen();
-		Codegen.generateWithComment("b", "","uncond", __start);
+		Codegen.generateWithComment("la", "", Codegen.T0, __start);
+		Codegen.generateWithComment("jr", "", Codegen.T0);
 		Codegen.genLabel(__end);
 	}
 
@@ -1363,11 +1408,15 @@ class IfStmtNode extends StmtNode {
 
 	public void codeGen(String fnName) {
 		String label = Codegen.nextLabel();
+		String not_jump_label = Codegen.nextLabel();
 		myExp.codeGen();
 		Codegen.generateWithComment("", "IF");
 		Codegen.genPop(Codegen.T0);
 		Codegen.generateWithComment("xor", "R0 is 0(FALSE)", Codegen.T0, Codegen.T0, "R0");
-		Codegen.generateWithComment("b", "", "eq", label);
+		Codegen.generateWithComment("b", "", "neq", not_jump_label);
+		Codegen.generateWithComment("la", "", Codegen.T0, label);
+		Codegen.generateWithComment("jr", "", Codegen.T0);
+		Codegen.genLabel(not_jump_label);
 		myStmtList.codeGen(fnName);
 		Codegen.genLabel(label);
 	}
@@ -1389,17 +1438,6 @@ class IfElseStmtNode extends StmtNode {
         myElseStmtList = slist2;
     }
     
-    /**
-     * nameAnalysis
-     * Given a symbol table symTab, do:
-     * - process the condition
-     * - enter a new scope
-     * - process the decls and stmts of then
-     * - exit the scope
-     * - enter a new scope
-     * - process the decls and stmts of else
-     * - exit the scope
-     */
     public int nameAnalysis(SymTable symTab, int offset) {
 		int size;
         myExp.nameAnalysis(symTab);
@@ -1444,13 +1482,18 @@ class IfElseStmtNode extends StmtNode {
 	public void codeGen(String fnName) {
 		String falseLabel = Codegen.nextLabel();
 		String endLabel = Codegen.nextLabel();
+		String not_jump_label = Codegen.nextLabel();
 		myExp.codeGen();
 		Codegen.generateWithComment("", "IF");
 		Codegen.genPop(Codegen.T0);
 		Codegen.generateWithComment("xor","",Codegen.T0, Codegen.T0, "R0");
-		Codegen.generateWithComment("b", "", "eq", falseLabel);
+		Codegen.generateWithComment("b", "", "neq", not_jump_label);
+		Codegen.generateWithComment("la", "", Codegen.T0, falseLabel);
+		Codegen.generateWithComment("jr", "", Codegen.T0);
+		Codegen.genLabel(not_jump_label);
 		myThenStmtList.codeGen(fnName);
-		Codegen.generateWithComment("b","","uncond", endLabel);
+		Codegen.generateWithComment("la","",Codegen.T0, endLabel);
+		Codegen.generateWithComment("jr", "", Codegen.T0);
 		Codegen.genLabel(falseLabel, "ELSE");
 		myElseStmtList.codeGen(fnName);
 		Codegen.genLabel(endLabel);
@@ -1515,14 +1558,19 @@ class WhileStmtNode extends StmtNode {
 	public void codeGen(String fnName) {
 		String start = Codegen.nextLabel();
 		String end = Codegen.nextLabel();
+		String not_jump = Codegen.nextLabel();
 		Codegen.generateWithComment("", "WHILE");
 		Codegen.genLabel(start, "START OF WHILE");
 		myExp.codeGen();
 		Codegen.genPop(Codegen.T0);
 		Codegen.generateWithComment("xor","", Codegen.T0, Codegen.T0, "R0");
-		Codegen.generateWithComment("b", "", "eq",  end);
+		Codegen.generateWithComment("b", "", "neq",  not_jump);
+		Codegen.generateWithComment("la", "", Codegen.T0, end);
+		Codegen.generateWithComment("jr", "", Codegen.T0);
+		Codegen.genLabel(not_jump);
 		myStmtList.codeGen(fnName);
-		Codegen.generateWithComment("b", "JUMP TO START", "uncond", start);
+		Codegen.generateWithComment("la", "JUMP TO START", Codegen.T0, start);
+		Codegen.generateWithComment("jr", "", Codegen.T0);
 		Codegen.genLabel(end, "END OF WHILE");
 	}
 
@@ -1662,6 +1710,271 @@ class ReturnStmtNode extends StmtNode {
     private ExpNode myExp; // possibly null
 }
 
+class SleepNode extends StmtNode {
+	public SleepNode() {
+    }
+
+    /**
+     * nameAnalysis
+     * Given a symbol table symTab, perform name analysis on this node's child
+     */
+    public int nameAnalysis(SymTable symTab, int offset) {
+		return offset;
+    }
+    
+    /**
+     * typeCheck
+     */
+    public void typeCheck(Type retType) {
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__sleep"); // no parentheses
+        p.println(";");
+    }
+
+	public void codeGen(String fnName) {
+		String flag = Codegen.nextLabel();
+		Codegen.generateWithComment("", "Store current address, halt CPU");
+		Codegen.generateWithComment("la", "", Codegen.T0, flag);
+		Codegen.generateWithComment("ll", "", Codegen.T1, Integer.toString( Codegen.Sleep_addr % 256));
+		Codegen.generateWithComment("lh", "", Codegen.T1, Integer.toString( Codegen.Sleep_addr / 256));
+		Codegen.generateWithComment("addi", "Store Position for SP", Codegen.T2, Codegen.T1, "3");
+		Codegen.generateWithComment("sw", "Store current SP", Codegen.SP, Codegen.T2);
+		Codegen.generateWithComment("addi", "Store Position for FP", Codegen.T2, Codegen.T2, "1");
+		Codegen.generateWithComment("sw", "Store current FP", Codegen.FP, Codegen.T2);
+		Codegen.genLabel(flag);
+		Codegen.generateWithComment("addi","", Codegen.T0, Codegen.T0, "0x03");
+		Codegen.generateWithComment("sw", "", Codegen.T0, Codegen.T1);
+		Codegen.generateWithComment("set", "","idle");
+		Codegen.generateWithComment("", "Wake up, cleaning return address");
+		Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString( Codegen.Sleep_addr % 256));
+		Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString( Codegen.Sleep_addr / 256));
+		Codegen.generateWithComment("sw", "", "R0", Codegen.T0);
+		Codegen.generateWithComment("addi", "", Codegen.T0, Codegen.T0, "3");
+		Codegen.generateWithComment("ld", "", Codegen.SP, Codegen.T0);
+		Codegen.generateWithComment("addi", "", Codegen.T0, Codegen.T0, "1");
+		Codegen.generateWithComment("ld", "", Codegen.FP, Codegen.T0);
+	}
+}
+
+class AcquireLockNode extends StmtNode {
+	public AcquireLockNode() {
+    }
+
+    /**
+     * nameAnalysis
+     * Given a symbol table symTab, perform name analysis on this node's child
+     */
+    public int nameAnalysis(SymTable symTab, int offset) {
+		return offset;
+    }
+    
+    /**
+     * typeCheck
+     */
+    public void typeCheck(Type retType) {
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__acquire_lock"); // no parentheses
+        p.println(";");
+    }
+
+	public void codeGen(String fnName) {
+		Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Interrupt_lock % 256));
+		Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Interrupt_lock / 256));
+		Codegen.generateWithComment("sw", "Store non-zero number", Codegen.T0, Codegen.T0);
+	}
+}
+
+class ReleaseLockNode extends StmtNode {
+	public ReleaseLockNode() {
+    }
+
+    /**
+     * nameAnalysis
+     * Given a symbol table symTab, perform name analysis on this node's child
+     */
+    public int nameAnalysis(SymTable symTab, int offset) {
+		return offset;
+    }
+    
+    /**
+     * typeCheck
+     */
+    public void typeCheck(Type retType) {
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__release_lock"); // no parentheses
+        p.println(";");
+    }
+
+	public void codeGen(String fnName) {
+		Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Interrupt_lock % 256));
+		Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Interrupt_lock / 256));
+		Codegen.generateWithComment("sw", "Store zero", "R0", Codegen.T0);
+	}
+}
+
+class SetPrintFormatHEX extends StmtNode {
+	public SetPrintFormatHEX() {
+    }
+
+    public int nameAnalysis(SymTable symTab, int offset) {
+		return offset;
+    }
+    public void typeCheck(Type retType) {
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__set_print_format(__print_HEX)"); // no parentheses
+        p.println(";");
+    }
+
+	public void codeGen(String fnName) {
+		Codegen.generateWithComment("", "Set Print Format to Hex");
+		Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Print_Format % 256));
+		Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Print_Format / 256));
+		Codegen.generateWithComment("ll", "", Codegen.T1, "0xff");
+		Codegen.generateWithComment("sw", "", Codegen.T1, Codegen.T0);
+	}
+}
+
+class SetPrintFormatDEC extends StmtNode {
+	public SetPrintFormatDEC() {
+    }
+
+    public int nameAnalysis(SymTable symTab, int offset) {
+		return offset;
+    }
+    public void typeCheck(Type retType) {
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__set_print_format(__print_DEC)"); // no parentheses
+        p.println(";");
+    }
+
+	public void codeGen(String fnName) {
+		Codegen.generateWithComment("", "Set Print Format to Dec");
+		Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Print_Format % 256));
+		Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Print_Format / 256));
+		Codegen.generateWithComment("ll", "", Codegen.T1, "0xfe");
+		Codegen.generateWithComment("sw", "", Codegen.T1, Codegen.T0);
+	}
+}
+
+class AcceleratorStartNode extends StmtNode {
+	public AcceleratorStartNode() {
+    }
+
+    public int nameAnalysis(SymTable symTab, int offset) {
+		return offset;
+    }
+    public void typeCheck(Type retType) {
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__accelerator_start"); // no parentheses
+        p.println(";");
+    }
+
+	public void codeGen(String fnName) {
+		Codegen.generateWithComment("", "Start the accelerator");
+		Codegen.generateWithComment("ctrl", "", "R0", "start", "0x1f");
+	}
+}
+
+class AcceleratorStopNode extends StmtNode {
+	public AcceleratorStopNode() {
+    }
+
+    public int nameAnalysis(SymTable symTab, int offset) {
+		return offset;
+    }
+    public void typeCheck(Type retType) {
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__accelerator_stop"); // no parentheses
+        p.println(";");
+    }
+
+	public void codeGen(String fnName) {
+		Codegen.generateWithComment("", "Stop the accelerator");
+		Codegen.generateWithComment("ctrl", "", "R0", "stop", "0x0");
+	}
+}
+
+class AcceleratorResetNode extends StmtNode {
+	public AcceleratorResetNode() {
+    }
+
+    public int nameAnalysis(SymTable symTab, int offset) {
+		return offset;
+    }
+    public void typeCheck(Type retType) {
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__accelerator_reset"); // no parentheses
+        p.println(";");
+    }
+
+	public void codeGen(String fnName) {
+		Codegen.generateWithComment("", "Reset the accelerator");
+		Codegen.generateWithComment("ctrl", "", "R0", "stop", "0x1f");
+	}
+}
+
+class AcceleratorTextNode extends StmtNode {
+	public AcceleratorTextNode(ExpNode text, IntLitNode addr) {
+		myText = text;
+		myAddr = addr;
+    }
+
+    public int nameAnalysis(SymTable symTab, int offset) {
+		myText.nameAnalysis(symTab);
+		myAddr.nameAnalysis(symTab);
+		return offset;
+    }
+    public void typeCheck(Type retType) {
+		Type type = myText.typeCheck();
+		Type type2= myAddr.typeCheck();
+
+		if (!type.isErrorType() && !type.isIntType()) {
+			ErrMsg.fatal(myText.lineNum(), myText.charNum(), "Non-integer text sends to accelerator");
+		}
+    }
+        
+    public void unparse(PrintWriter p, int indent) {
+        doIndent(p, indent);
+        p.print("__accelerator_send_text( "); // no parentheses
+		myText.unparse(p, 0);
+		p.print(",");
+		myAddr.unparse(p, 0);
+        p.println(");");
+    }
+
+	public void codeGen(String fnName) {
+		myText.codeGen();
+		Codegen.generateWithComment("", "Send text to accelerator");
+		Codegen.genPop(Codegen.T0);
+		Codegen.generateWithComment("ctrl", "", Codegen.T0, "start", Integer.toString(myAddr.getIntVal()));
+	}
+	private ExpNode myText;
+	private IntLitNode myAddr;
+}
 // **********************************************************************
 // ExpNode and its subclasses
 // **********************************************************************
@@ -1678,6 +1991,53 @@ abstract class ExpNode extends ASTnode {
 	abstract public void codeGen();
 }
 
+class AcceleratorPerformanceNode extends ExpNode {
+    public AcceleratorPerformanceNode(int lineNum, int charNum, int intVal) {
+        myLineNum = lineNum;
+        myCharNum = charNum;
+        myIntVal = intVal;
+		if (myIntVal < 0) myIntVal += 65536;
+    }
+    
+    /**
+     * Return the line number for this literal.
+     */
+    public int lineNum() {
+        return myLineNum;
+    }
+    
+    /**
+     * Return the char number for this literal.
+     */
+    public int charNum() {
+        return myCharNum;
+    }
+        
+    /**
+     * typeCheck
+     */
+    public Type typeCheck() {
+        return new IntType();
+    }
+   	
+	public int getIntVal() {
+		return myIntVal;
+	}
+
+    public void unparse(PrintWriter p, int indent) {
+		p.print("__accelerator_get_performance( "+myIntVal+ " )");
+    }
+
+	public void codeGen() {
+		Codegen.generateWithComment("", "Read Performance data from accelerator");
+		Codegen.generateWithComment("ctrl", "", Codegen.T0, "read", Integer.toString(myIntVal+16));
+		Codegen.genPush(Codegen.T0);
+	}
+
+    private int myLineNum;
+    private int myCharNum;
+    private int myIntVal;
+}
 class IntLitNode extends ExpNode {
     public IntLitNode(int lineNum, int charNum, int intVal) {
         myLineNum = lineNum;
@@ -2010,55 +2370,65 @@ class IdNode extends ExpNode {
 	public void codeGen() {
 		if (mySym.getLevel() == 0) { // global variable
 			Codegen.generateWithComment("", "LOAD GLOBAL VARIABLE");
-			Codegen.generateWithComment("la", "Get Address", Codegen.T0, "_"+myStrVal);
 			if (myIndex != null) {
 				String label = Codegen.nextLabel();
-				myIndex.codeGen();
-				Codegen.genPop(Codegen.T1);
-				Codegen.generateWithComment("", "Check range");
-				Codegen.generateWithComment("ll", "", Codegen.T2, Integer.toString(mySym.getArraySize() %256));
+				myIndex.codeGen();// push offset
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(mySym.getArraySize() %256));
 				if (mySym.getArraySize() > 255) {
-					Codegen.generateWithComment("lh", "", Codegen.T2, Integer.toString(mySym.getArraySize() / 256));
+					Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(mySym.getArraySize() / 256));
 				}
-				Codegen.generateWithComment("sub", "", Codegen.T2, Codegen.T1, Codegen.T2);
-				Codegen.generateWithComment("b", "", "lt",label);
-				Codegen.generateWithComment("la", "", Codegen.A0, "__L0");
-				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Print_Str % 256));
-				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Print_Str / 256));
-				Codegen.generateWithComment("la", "", Codegen.RA, "_main_Exit");
+				Codegen.genPush(Codegen.T0); // push range
+
+				// jump to handler
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Out_Of_Range % 256));
+				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Out_Of_Range / 256));
+				Codegen.generateWithComment("jl", "", label);
+				Codegen.genLabel(label);
+				Codegen.generateWithComment("addi", "", Codegen.RA, Codegen.RA, "2");
 				Codegen.generateWithComment("jr", "", Codegen.T0);
-				Codegen.genLabel(label,"Not out-of-range");
+				Codegen.genPop(Codegen.T0);// pop out offset
+				Codegen.generateWithComment("la","", Codegen.T1, "_"+myStrVal);
 				Codegen.generateWithComment("add", "", Codegen.T0, Codegen.T0, Codegen.T1);
 
+			}
+			else {
+				Codegen.generateWithComment("la", "Get Address", Codegen.T0, "_"+myStrVal);
 			}
 			Codegen.generateWithComment("ld", "load value", Codegen.T0, Codegen.T0);
 			Codegen.genPush(Codegen.T0);
 		}
 		else { // local variable
 			Codegen.generateWithComment("", "LOAD LOCAL VARIABLE");
-			Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(-mySym.getOffset()%256));
-			if (-mySym.getOffset() > 256) {
-				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(-mySym.getOffset()/256));
-			}
-			Codegen.generateWithComment("sub", "", Codegen.T0, Codegen.FP, Codegen.T0);
 			if (myIndex != null) {
 				String label = Codegen.nextLabel();
-				myIndex.codeGen();
-				Codegen.genPop(Codegen.T1);
-				Codegen.generateWithComment("", "Check range");
-				Codegen.generateWithComment("ll", "", Codegen.T2, Integer.toString(mySym.getArraySize() %256));
+				myIndex.codeGen();// push offset
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(mySym.getArraySize() %256));
 				if (mySym.getArraySize() > 255) {
-					Codegen.generateWithComment("lh", "", Codegen.T2, Integer.toString(mySym.getArraySize() / 256));
+					Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(mySym.getArraySize() / 256));
 				}
-				Codegen.generateWithComment("sub", "", Codegen.T2, Codegen.T1, Codegen.T2);
-				Codegen.generateWithComment("b", "", "lt",label);
-				Codegen.generateWithComment("la", "", Codegen.A0, "__L0");
-				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Print_Str % 256));
-				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Print_Str / 256));
-				Codegen.generateWithComment("la", "", Codegen.RA, "_main_Exit");
+				Codegen.genPush(Codegen.T0); // push range
+
+				// jump to handler
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Out_Of_Range % 256));
+				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Out_Of_Range / 256));
+				Codegen.generateWithComment("jl", "", label);
+				Codegen.genLabel(label);
+				Codegen.generateWithComment("addi", "", Codegen.RA, Codegen.RA, "2");
 				Codegen.generateWithComment("jr", "", Codegen.T0);
-				Codegen.genLabel(label,"Not out-of-range");
-				Codegen.generateWithComment("sub", "", Codegen.T0, Codegen.T0, Codegen.T1);
+				Codegen.genPop(Codegen.T0);// pop out offset
+				Codegen.generateWithComment("ll", "", Codegen.T1, Integer.toString(-mySym.getOffset()%256));
+				if (-mySym.getOffset() > 256) {
+					Codegen.generateWithComment("lh", "", Codegen.T1, Integer.toString(-mySym.getOffset()/256));
+				}
+				Codegen.generateWithComment("sub", "", Codegen.T1, Codegen.FP, Codegen.T1);
+				Codegen.generateWithComment("add", "", Codegen.T0, Codegen.T0, Codegen.T1);
+			}
+			else {
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(-mySym.getOffset()%256));
+				if (-mySym.getOffset() > 256) {
+					Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(-mySym.getOffset()/256));
+				}
+				Codegen.generateWithComment("sub", "", Codegen.T0, Codegen.FP, Codegen.T0);
 			}
 			Codegen.generateWithComment("ld", "", Codegen.T0, Codegen.T0);
 			Codegen.genPush(Codegen.T0);
@@ -2068,25 +2438,28 @@ class IdNode extends ExpNode {
 	public void genAddr() {
 		if (mySym.getLevel() == 0) { //global variable
 			Codegen.generateWithComment("", "GET ADDRESS FOR GLOBAL VARIABLE");
-			Codegen.generateWithComment("la", "", Codegen.T0, "_"+myStrVal);
 			if (myIndex != null) {
 				String label = Codegen.nextLabel();
-				myIndex.codeGen();
-				Codegen.genPop(Codegen.T1);
-				Codegen.generateWithComment("", "Check range");
-				Codegen.generateWithComment("ll", "", Codegen.T2, Integer.toString(mySym.getArraySize() %256));
+				myIndex.codeGen();// push offset
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(mySym.getArraySize() %256));
 				if (mySym.getArraySize() > 255) {
-					Codegen.generateWithComment("lh", "", Codegen.T2, Integer.toString(mySym.getArraySize() / 256));
+					Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(mySym.getArraySize() / 256));
 				}
-				Codegen.generateWithComment("sub", "", Codegen.T2, Codegen.T1, Codegen.T2);
-				Codegen.generateWithComment("b", "", "lt",label);
-				Codegen.generateWithComment("la", "", Codegen.A0, "__L0");
-				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Print_Str % 256));
-				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Print_Str / 256));
-				Codegen.generateWithComment("la", "", Codegen.RA, "_main_Exit");
+				Codegen.genPush(Codegen.T0); // push range
+
+				// jump to handler
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Out_Of_Range % 256));
+				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Out_Of_Range / 256));
+				Codegen.generateWithComment("jl", "", label);
+				Codegen.genLabel(label);
+				Codegen.generateWithComment("addi", "", Codegen.RA, Codegen.RA, "2");
 				Codegen.generateWithComment("jr", "", Codegen.T0);
-				Codegen.genLabel(label,"Not out-of-range");
+				Codegen.genPop(Codegen.T0);// pop out offset
+				Codegen.generateWithComment("la","", Codegen.T1, "_"+myStrVal);
 				Codegen.generateWithComment("add", "", Codegen.T0, Codegen.T0, Codegen.T1);
+			}
+			else {
+				Codegen.generateWithComment("la", "Get Address", Codegen.T0, "_"+myStrVal);
 			}
 			Codegen.genPush(Codegen.T0);
 		}
@@ -2099,22 +2472,34 @@ class IdNode extends ExpNode {
 			Codegen.generateWithComment("sub","Calculate address",  Codegen.T0, Codegen.FP, Codegen.T0);
 			if (myIndex != null) {
 				String label = Codegen.nextLabel();
-				myIndex.codeGen();
-				Codegen.genPop(Codegen.T1);
-				Codegen.generateWithComment("", "Check range");
-				Codegen.generateWithComment("ll", "", Codegen.T2, Integer.toString(mySym.getArraySize() %256));
+				myIndex.codeGen();// push offset
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(mySym.getArraySize() %256));
 				if (mySym.getArraySize() > 255) {
-					Codegen.generateWithComment("lh", "", Codegen.T2, Integer.toString(mySym.getArraySize() / 256));
+					Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(mySym.getArraySize() / 256));
 				}
-				Codegen.generateWithComment("sub", "", Codegen.T2, Codegen.T1, Codegen.T2);
-				Codegen.generateWithComment("b", "", "lt",label);
-				Codegen.generateWithComment("la", "", Codegen.A0, "__L0");
-				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Print_Str % 256));
-				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Print_Str / 256));
-				Codegen.generateWithComment("la", "", Codegen.RA, "_main_Exit");
+				Codegen.genPush(Codegen.T0); // push range
+
+				// jump to handler
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(Codegen.Out_Of_Range % 256));
+				Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(Codegen.Out_Of_Range / 256));
+				Codegen.generateWithComment("jl", "", label);
+				Codegen.genLabel(label);
+				Codegen.generateWithComment("addi", "", Codegen.RA, Codegen.RA, "2");
 				Codegen.generateWithComment("jr", "", Codegen.T0);
-				Codegen.genLabel(label,"Not out-of-range");
-				Codegen.generateWithComment("sub", "", Codegen.T0, Codegen.T0, Codegen.T1);
+				Codegen.genPop(Codegen.T0);// pop out offset
+				Codegen.generateWithComment("ll", "", Codegen.T1, Integer.toString(-mySym.getOffset()%256));
+				if (-mySym.getOffset() > 256) {
+					Codegen.generateWithComment("lh", "", Codegen.T1, Integer.toString(-mySym.getOffset()/256));
+				}
+				Codegen.generateWithComment("sub", "", Codegen.T1, Codegen.FP, Codegen.T1);
+				Codegen.generateWithComment("add", "", Codegen.T0, Codegen.T0, Codegen.T1);
+			}
+			else {
+				Codegen.generateWithComment("ll", "", Codegen.T0, Integer.toString(-mySym.getOffset()%256));
+				if (-mySym.getOffset() > 256) {
+					Codegen.generateWithComment("lh", "", Codegen.T0, Integer.toString(-mySym.getOffset()/256));
+				}
+				Codegen.generateWithComment("sub", "", Codegen.T0, Codegen.FP, Codegen.T0);
 			}
 			Codegen.genPush(Codegen.T0);
 		}

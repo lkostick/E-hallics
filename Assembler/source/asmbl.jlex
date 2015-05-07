@@ -39,6 +39,11 @@ return new Symbol(sym.EOF);
 %line
 
 %%
+[Aa][Dd][Dd][Ii]
+			 { //Addi
+				CharNum.num +=4;
+				return new Symbol(sym.ADDI, new TokenVal(yyline+1, CharNum.num-3, null));
+			 }
 [Aa][Dd][Dd] { //Add
 			   CharNum.num +=3;
 			   return new Symbol(sym.ADD, new TokenVal(yyline+1, CharNum.num-3, null));
@@ -103,7 +108,10 @@ return new Symbol(sym.EOF);
 			   CharNum.num +=2;
 			   return new Symbol(sym.RECV, new TokenVal(yyline+1, CharNum.num-2, null));
 			 }
-
+[Ll][Aa]     { //Load address
+			   CharNum.num += 2;
+			   return new Symbol(sym.LA, new TokenVal(yyline+1, CharNum.num - 2, null));
+			 }
 [Rr]{HEX} { //Register
 			CharNum.num +=2;
 			return new Symbol(sym.REG,new TokenVal(yyline+1,CharNum.num-2,yytext().substring(1)));
@@ -168,7 +176,26 @@ return new Symbol(sym.EOF);
 		   CharNum.num +=6;
 		   return new Symbol(sym.COND, new TokenVal(yyline + 1, CharNum.num - 6, "7"));
 		 }
-
+[Ss][Tt][Aa][Rr][Tt]
+		 { // Accelerator start mode
+		   CharNum.num += 5;
+		   return new Symbol(sym.ACCMODE, new TokenVal(yyline + 1, CharNum.num -5, "1"));
+		 }
+[Rr][Ee][Aa][Dd]
+		 { // Accelerator start mode
+		   CharNum.num += 4;
+		   return new Symbol(sym.ACCMODE, new TokenVal(yyline + 1, CharNum.num -4, "2"));
+		 }
+[Ss][Tt][Oo][Pp]
+		 { // Accelerator start mode
+		   CharNum.num += 4;
+		   return new Symbol(sym.ACCMODE, new TokenVal(yyline + 1, CharNum.num -4, "3"));
+		 }
+[Nn][Oo][Tt][Hh][Ii][Nn][Gg]
+		 {
+		   CharNum.num += 7;
+		   return new Symbol(sym.ACCMODE, new TokenVal(yyline + 1, CharNum.num - 7, "0"));
+		 }
 [Ii][Dd][Ll][Ee]
 		 { // CPU mode: idle
 		   CharNum.num += 4;
@@ -203,6 +230,12 @@ return new Symbol(sym.EOF);
 		{ // Device selection;
 		  CharNum.num += 5;
 		  return new Symbol(sym.INT, new TokenVal(yyline + 1, CharNum.num -5, "0"));
+		}
+
+[Ww][Rr][Ii][Tt][Ee][Tt][Hh][Rr][Oo][Uu][Gg][Hh]
+		{ Symbol S = new Symbol(sym.WRITETHROUGH, new TokenVal(yyline + 1, CharNum.num, ""));
+		  CharNum.num += yytext().length();
+		  return S;
 		}
 
 ({LETTER}|{DIGIT}|_)+ 
@@ -247,9 +280,16 @@ return new Symbol(sym.EOF);
 							yytext().substring(1, yytext().length() - 1)));
 		  }
 
+\\{HEX}{HEX}{HEX}{HEX}
+		  { // STATIC DATA
+			CharNum.num += 5;
+			return new Symbol(sym.STATIC, new TokenVal(yyline + 1, CharNum.num - 5, yytext().substring(1)));
+		  }
 (//|#)[^\n]*
- 		  { // This is a comment, Ignore
+ 		  { // This is a comment
+			Symbol S = new Symbol(sym.COMMENT, new TokenVal(yyline +1, CharNum.num, yytext()));
 		  	CharNum.num += yytext().length();
+			return S;
 		  }
 
 {SEP}     { CharNum.num+=yytext().length();}

@@ -2,19 +2,18 @@ import java.io.*;
 import java.util.*;
 
 abstract class ASTnode {
-	abstract public void translate();
 }
  
-class ProgramNode extends ASTnode {
+class ProgramNode extends ASTnode { 
 	public ProgramNode(InstrListNode L) {
 		myInstrList = L;
 	}
 
-	public void translate() {
-		myInstrList.translate();
+	public void translate(String flag) { 
+		myInstrList.translate(flag);
 	}
 
-	public void FlagCheck() {
+	public void FlagCheck() { 
 		myInstrList.FlagCheck();
 	}
 
@@ -26,42 +25,59 @@ class InstrListNode extends ASTnode {
 		myInstrs = S;
 	}
 
-	public void translate() {
+	public void translate(String flag) {
 		Iterator it = myInstrs.iterator();
+		int codeLength = Integer.valueOf(flag, 10);
 		try {
-			int n = 0;
-			while(it.hasNext()) {
-				InstrNode next = (InstrNode)it.next();
-				if (next.getAddr() != -1) {
-					if (next.getAddr() < n) {
-						System.err.println("Error");
-						System.exit(-1);
+	 		if (codeLength > 0) {
+				int instrCount = 0;
+				for (InstrNode instr: myInstrs) {
+					if (instr.getAddr() != -1)
+						instrCount = instr.getAddr();
+					else
+						instrCount += instr.increaseAddr();
+				}
+				if (instrCount > codeLength) {
+					System.err.println("<Code_Length> is too small");
+					System.exit(-1);
+				}
+	 			int n = 0;
+	 	 		while(it.hasNext()) {
+					InstrNode next = (InstrNode)it.next();
+	 	 			if (next.getAddr() != -1) {
+						if (next.getAddr() < n) {
+							System.err.println("Error");
+							System.exit(-1);
+	 	 				}
+						else {
+						for (int i =n; i<next.getAddr(); i++)
+							System.out.println("0000");
+						n = next.getAddr();
+	 	 				}
 					}
-					else {
-					for (int i =n; i<next.getAddr(); i++)
-						System.out.println("0000");
-					n = next.getAddr();
+	 	 			else {
+						n+=next.increaseAddr();
+						next.translate();
 					}
 				}
-				else {
-					n++;
-					next.translate();
-				}
+				for (int i = n ; i < codeLength; i++)
+					System.out.println("0000");
 			}
-			for (int i = n ; i < 512; i++)
-				System.out.println("0000");
-
+			else
+				while (it.hasNext())
+					((InstrNode)it.next()).translate();
 		} catch (NoSuchElementException ex) {
 			System.err.println("Empty program");
 			System.exit(-1);
-		}
-	}
+	 	} 
+ 	} 
 
  	public void FlagCheck() {
 		int index = 0, addr = 0;;
 		HashMap<String, Integer> Flags = new HashMap<String, Integer>();
  		while (index < myInstrs.size()) {
 			InstrNode instr = myInstrs.get(index);
+			// get all flags and their addres
  			if (instr.isFlag() != null) {
 				if (Flags.containsKey(instr.isFlag())) {
 					System.err.println("Warning: Duplicated flags: "+instr.isFlag()+", ingore it. @"+instr.getLine()+":"+instr.getChar());
@@ -74,12 +90,17 @@ class InstrListNode extends ASTnode {
 			{
 				index++;
 				if (instr.getAddr() != -1) {
+					if (addr > instr.getAddr()) {
+						System.err.println("No enough space @"+Integer.toString(addr, 16));
+						System.exit(-1);
+					}
 					addr = instr.getAddr();
 				}
-				else addr++;
+				else addr+= instr.increaseAddr();
 			}
 
 		}
+		// assign address to instruction
 		addr = 0;
  		for (InstrNode instr: myInstrs) {
  			if (instr.needFlag() != null) {
@@ -87,22 +108,27 @@ class InstrListNode extends ASTnode {
 					System.err.println("Error: flag: "+instr.needFlag() + " is not found. @"+instr.getLine()+":"+instr.getChar());
 					System.exit(-1);
  				}
-				if (!instr.SetImme(Flags.get(instr.needFlag()) - addr))
+				if (instr instanceof La) {
+					instr.SetImme(Flags.get(instr.needFlag()));
+				}
+				else if (!instr.SetImme(Flags.get(instr.needFlag()) - addr))
 					System.err.println(" @"+instr.getLine()+":"+instr.getChar());
 			}
 			if (instr.getAddr() != -1){
 				addr = instr.getAddr();
 			}
 			else
-				addr++;
+				addr+= instr.increaseAddr();
 		}
 	}
 	private List<InstrNode> myInstrs; 
-}
-
+} 
+ 
 abstract class InstrNode extends ASTnode {
 	public String[] HEX = {"0","1","2","3","4","5","6","7","8","9",
 						   "a","b","c","d","e","f"};
+
+	abstract public void translate();
 	public String isFlag(){
 		return null;
  	}
@@ -125,6 +151,11 @@ abstract class InstrNode extends ASTnode {
 	public int getAddr() {
 		return -1;
 	}
+
+	public int increaseAddr() {
+		return 1;
+	}
+
 	protected int linenum, charnum;
 } 
 
@@ -152,12 +183,22 @@ class LdSw extends InstrNode {
 		this.rs = rs;
 		this.linenum = line;
 		this.charnum = Char;
-	}
-	public void translate() {
-		System.out.println(func+HEX[rd]+HEX[rs]+"0");
+		this.mode ="0";
 	}
 
-	private String func;
+	public LdSw(int line, int Char, String func, int rd, int rs, int mode) {
+		this.func = func;
+		this.rd = rd;
+		this.rs = rs;
+		this.linenum = line;
+		this.charnum = Char;
+		this.mode ="1";
+	}
+	public void translate() {
+		System.out.println(func+HEX[rd]+HEX[rs]+mode);
+	}
+
+	private String func, mode;
 	private int rd, rs;
 }
 
@@ -344,14 +385,46 @@ class Send extends InstrNode {
 		this.charnum = Char;
 	}
 
+	public Send(int line, int Char, String s) {
+		this.linenum = line;
+		this.charnum = Char;
+		this.imme = 0;
+		int i = 0;
+		immeList = new ArrayList<Integer>();
+		while ( i < s.length() ){
+			if (s.charAt(i) == '\\') {
+				i++;
+				if (s.charAt(i) == 'n')
+					immeList.add(13);
+				else if (s.charAt(i) == 't')
+					immeList.add(9);
+				else
+					immeList.add((int)s.charAt(i));
+			}
+			else 
+				immeList.add((int)s.charAt(i));
+			i++;
+		}
+	}
+
 	public void translate() {
 		if (imme == -1)
 			System.out.println("c"+HEX[rd]+"0"+HEX[mode]);
-		else
+		else if(immeList == null)
 			System.out.println("c"+HEX[imme/16]+HEX[imme%16]+HEX[2]);
+		else
+			for (Integer imme : immeList)
+				System.out.println("c"+HEX[imme/16] + HEX[imme%16] + HEX[2]);
+	}
+
+	public int increaseAddr() {
+		if (immeList == null)
+			return 1;
+		return immeList.size();
 	}
 
 	private int rd, imme, mode;
+	private ArrayList<Integer> immeList;
 }
 
 class Set extends InstrNode {
@@ -366,6 +439,22 @@ class Set extends InstrNode {
 	}
 	private int mode;
 }  
+
+class Ctrl extends InstrNode {
+	public Ctrl(int line, int Char, int rd, int mode, int addr) {
+		this.linenum = line;
+		this.charnum = Char;
+		this.rd = rd;
+		this.mode = mode;
+		this.addr = addr;
+	}
+
+	public void translate() {
+		System.out.println("b"+HEX[rd]+HEX[mode*4+addr/16]+HEX[addr%16]);
+	}
+
+	private int rd, mode, addr;
+}
 class Rv extends InstrNode {
 	public Rv(int line, int Char, int rd, int device, int addr) {
 		this.linenum = line;
@@ -376,7 +465,7 @@ class Rv extends InstrNode {
 	}
 
 	public void translate() {
-		System.out.println("e"+HEX[rd]+HEX[device*4+addr/16]+HEX[addr % 16]);
+		System.out.println("e"+HEX[rd]+HEX[device*8+addr/16]+HEX[addr % 16]);
 	}
 
 	private int rd, device, addr;
@@ -397,4 +486,80 @@ class Addr extends InstrNode {
 	}
 
 	private int addr;
+}
+class La extends InstrNode {
+	public La(int line, int Char, int rd, String flag) {
+		this.linenum = line;
+		this.charnum = Char;
+		this.rd = rd;
+		this.flag = flag;
+		this.imme = -1;
+	}
+	
+	public void translate() {
+		if(this.imme == -1) {
+			System.err.println("Error");
+			System.exit(-1);
+		}
+		System.out.println("6"+HEX[rd]+HEX[imme %256/16]+HEX[imme % 16]); // load low first;
+		System.out.println("5"+HEX[rd]+HEX[imme /4096]+HEX[imme%4096/256]);
+	}
+	public String needFlag() {
+		return this.flag;
+	}
+
+	public boolean SetImme(int Imme) {
+		this.imme = Imme;
+		if (this.imme <0)
+			this.imme += 65536;
+		return true;
+	}
+
+	public int increaseAddr() {
+		return 2;
+	}
+	private int rd, imme;
+	private String flag;
+}
+class Static extends InstrNode {
+	public Static(int line, int Char, String data) {
+		this.linenum = line;
+		this.charnum = Char;
+		this.data = data;
+	}
+	public void translate() {
+		System.out.println(data);
+	}
+	private String data;
+}
+
+class Addi extends InstrNode {
+	public Addi(int line, int Char, int rd, int rs, int imme) {
+		this.linenum = line;
+		this.charnum = Char;
+		this.rd = rd;
+		this.rs = rs;
+		this.imme = imme;
+	}
+	public void translate() {
+		System.out.println("f"+HEX[rd]+HEX[rs]+HEX[imme]);
+	}
+	private int rd, rs, imme;
+}
+class Comment extends InstrNode {
+	public Comment(int line, int Char, String comment) {
+		this.linenum  = line;
+		this.charnum = Char;
+		this.comment = comment;
+	}
+
+	public void translate() {
+	//	System.out.println(comment);
+	}
+
+	public int increaseAddr() {
+		return 0;
+	}
+
+	private String comment;
 }

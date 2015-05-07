@@ -23,8 +23,8 @@ public void syntax_error(Symbol currToken) {
 /* Terminals (tokens returned by the scanner) */
 terminal TokenVal       ADD, SUB, XOR, LD, SW, LH, LL, SHIFT,
 						BRANCH, JLINK, JREG, CTRL, SEND, SET, 
-						RECV, REG, INT, SHIFTMODE, COND, STR, FLAG,
-						SETMODE, SENDMODE, ADDR, STRING;
+						RECV, LA, ADDI, REG, INT, SHIFTMODE, COND, STR, FLAG,
+						SETMODE, SENDMODE, ADDR, STRING, STATIC, WRITETHROUGH, COMMENT, ACCMODE;
 
 
 /* Nonterminals
@@ -81,6 +81,11 @@ instr           ::= ADD:func REG:rd REG:rs REG:rt
 				{: RESULT = new LdSw(func.linenum, func.charnum,
 								     "4",(int)Integer.valueOf(rd.Index,16), 
 										 (int)Integer.valueOf(rs.Index,16));
+                :}
+				| SW:func REG:rd REG:rs WRITETHROUGH
+				{: RESULT = new LdSw(func.linenum, func.charnum,
+								     "4",(int)Integer.valueOf(rd.Index,16), 
+										 (int)Integer.valueOf(rs.Index,16), 1);
                 :}
 				| LH:func REG:rd INT:imme
 				{: int Imme = 0;
@@ -203,7 +208,49 @@ instr           ::= ADD:func REG:rd REG:rs REG:rt
 						   			(int)Integer.valueOf(rd.Index, 16),
 									Device, Addr);
 				:}
+				|  CTRL:func REG:rd	ACCMODE:mode INT:addr
+				{: int Addr = 0;
+				   if (addr.Index.length() > 2 && addr.Index.substring(0,2).equals("0x")) {
+					   Addr = Integer.valueOf(addr.Index.substring(2), 16);
+				   }
+				   else {
+					   Addr = Integer.valueOf(addr.Index);
+				   }
+				   if (Addr > 31) {
+					   System.err.println(addr.linenum + ":" + addr.charnum + " Th address is too large.");
+					   System.exit(-1);
+				   }
+				   RESULT = new Ctrl(func.linenum, func.charnum,
+						   			 (int)Integer.valueOf(rd.Index, 16),
+									 (int)Integer.valueOf(mode.Index),
+									 Addr);
+				:}
+				| LA:func REG:rd STR:s
+				{: RESULT = new La(func.linenum, func.charnum,
+									(int)Integer.valueOf(rd.Index, 16),
+									s.Index);
+				:}
+				| ADDI:func REG:rd REG:rs INT:imme
+				{: int Imme = 0;
+				   if(imme.Index.length() > 2 && imme.Index.substring(0,2).equals("0x")) { // HEX
+					   Imme = Integer.valueOf(imme.Index.substring(2), 16);
+				   }
+				   else
+					   Imme = Integer.valueOf(imme.Index, 10);
+				//   if ( Imme > 16) {
+				//	   System.err.println(imme.linenum + ":" + imme.charnum+ " The integer is too large.");
+				//	   System.exit(-1);
+				//   }
+				   RESULT = new Addi(func.linenum, func.charnum,
+						   			(int)Integer.valueOf(rd.Index, 16), (int)Integer.valueOf(rs.Index, 16), Imme);
+				:}
 				| ADDR:a
 				{: RESULT = new Addr(a.linenum, a.charnum, (int)Integer.valueOf(a.Index, 16));
+				:}
+				| STATIC:s
+				{: RESULT = new Static(s.linenum, s.charnum, s.Index);
+				:}
+				| COMMENT:s
+				{: RESULT = new Comment(s.linenum, s.charnum, s.Index);
 				:}
                 ;

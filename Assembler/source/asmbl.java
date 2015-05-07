@@ -4,7 +4,10 @@ import java_cup.runtime.*;  // defines Symbol
 
 public class asmbl {
     public static void main(String[] args) throws IOException {
+		asmbl instance = new asmbl(args);
+    }
 
+	public asmbl(String[] args) {
 		FileReader inFile = null;
 		String flag = "0";
 		String filename = "";
@@ -47,5 +50,6 @@ public class asmbl {
 		((ProgramNode)root.value).FlagCheck();
 		((ProgramNode)root.value).translate(flag);
 		return;
-    }
+
+	}
 }

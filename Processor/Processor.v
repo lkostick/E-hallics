@@ -31,6 +31,8 @@ module Processor(clk, rst, i_hit, instr, i_addr, d_hit, d_addr, Mem_re, Mem_we, 
 	wire [7:0] Imme;
 	wire [1:0] Updateflag_IDEX_in, Updateflag_IDEX_out, source_sel_IDEX_in, source_sel_IDEX_out, Mode_Set, Mode, Mode_IDEX_out, Accelerator_mode, Mem_sel_IDEX_in, Mem_sel_IDEX_out, Mem_sel_EXMEM_out;
 	wire [4:0] Accelerator_addr;
+	reg [1:0] Acc_Stall_Flag;
+	reg [15:0] Acc_Data_Hold;
 	
 	assign d_addr_pre = (~d_hit & (Mem_re | Mem_we))? d_addr : p0_EXMEM_in;
 	assign Accelerator_send_data = p0_IDEX_out;
@@ -46,7 +48,7 @@ module Processor(clk, rst, i_hit, instr, i_addr, d_hit, d_addr, Mem_re, Mem_we, 
 
 	// Accelerator control signal
 			
-	RF iRF(.clk(clk), .we((we_EXMEM_out& ~MEMWB_stall) | (Mem_sel_EXMEM_out[1] & ~Accelerator_stall)), .p0_addr(p0_addr), .p1_addr(p1_addr), .dst_addr(dst_addr_EXMEM_out), .dst(data_MEMWB_in), .p0(p0), .p1(p1));
+	RF iRF(.clk(clk), .we(we_EXMEM_out& ~MEMWB_stall), .p0_addr(p0_addr), .p1_addr(p1_addr), .dst_addr(dst_addr_EXMEM_out), .dst(data_MEMWB_in), .p0(p0), .p1(p1));
 	
 	Bypass_MUX ip0IDBY(.sel(p0_ID_bypass), .in(p0), .bypass(p0_bypass_in), .out(p0_IDEX_in));
 	Bypass_MUX ip1IDBY(.sel(p1_ID_bypass), .in(p1), .bypass(p1_bypass_in), .out(p1_bypass_out));
@@ -73,7 +75,18 @@ module Processor(clk, rst, i_hit, instr, i_addr, d_hit, d_addr, Mem_re, Mem_we, 
 
 	BR iBR(.condition(condition_IDEX_out), .z(Z_out), .ov(OV_out), .n(N_out), .taken(taken_IDEX_out), .miss(miss));
 
-	Source_MUX iMUX5(.sel(source_sel_IDEX_out), .JL_PC(branch_PC_IDEX_out), .alu(alu_out), .spart(spart_data), .data(data_EXMEM_in));
+   // Hold Acc data
+	always @(posedge clk)
+		if (Accelerator_stall) Acc_Stall_Flag <= 1;
+		else if (Acc_Stall_Flag == 1) Acc_Stall_Flag <= 2;
+		else if (Acc_Stall_Flag == 2 & IDEX_stall) Acc_Stall_Flag <= 2;
+		else Acc_Stall_Flag <= 3;
+	
+	always @(posedge clk)
+		if (~Accelerator_stall & Acc_Stall_Flag) Acc_Data_Hold <= Accelerator_receive_data;
+		else Acc_Data_Hold <= Acc_Data_Hold;
+	
+	Source_MUX iMUX5(.sel(source_sel_IDEX_out), .JL_PC(branch_PC_IDEX_out), .alu(alu_out), .spart(spart_data), .data(data_EXMEM_in), .Acc((Acc_Stall_Flag == 2) ? Acc_Data_Hold : Accelerator_receive_data));
 
 	// SPART send data
 	SPART_MUX iSPART(.sel(send_sel_IDEX_out), .p1(p1_IDEX_out), .out(send_data));

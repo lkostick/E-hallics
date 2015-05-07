@@ -204,7 +204,8 @@ always @(*) begin
 			dst_addr = instr[11:8];
 			we = (instr[7:6] ==2'b10)? 1 : 0; // read
 			p0_re = (instr[7:6]==2'b01 && instr[4] != 1)? 1 : 0;
-			Mem_sel = 2;
+			Mem_sel = 0;
+			source_sel = 2'b11;
 		end
 		default:
 			we = 0;

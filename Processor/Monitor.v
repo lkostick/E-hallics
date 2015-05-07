@@ -14,7 +14,7 @@ always @(posedge clk) begin
 	illegal_pc <= Illegal_PC_in & ~miss ;//& |Mode;
 	illegal_memory <= Illegal_Memory_in & ~miss;// & |Mode;
 	spart_rcv <= (Spart_RCV_in & (~Mode[1])) & ~miss;
-	accelerator_keyfound <= Accelerator_keyfound_in;
+	accelerator_keyfound <= (Accelerator_keyfound_in & (~Mode[1])) & ~miss;
 end
 
 always @(posedge clk) begin

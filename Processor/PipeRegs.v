@@ -119,6 +119,11 @@ module ID_EX(clk, stall, flush, full, store_current, Alu_Op_in, Alu_Op_out, we_i
 				Accelerator_addr_out <= 0;
 				Accelerator_rst_out <= 0;
 			end
+			else if (Accelerator_mode_out == 2'b10 && Accelerator_addr_out == 5'h10) begin
+				Accelerator_mode_out <= 0;
+				Accelerator_addr_out <= 0;
+				Accelerator_rst_out <= 0;
+			end
 			else begin
 				Accelerator_mode_out <= Accelerator_mode_out;
 				Accelerator_addr_out <= Accelerator_addr_out;
@@ -194,12 +199,12 @@ module EX_MEM(clk, stall, accelerator_stall, alu_in, alu_out, we_in, we_out, dst
 
 	always @(posedge clk) begin
 		if (stall) begin
-			we_out <= (Mem_sel_out[1] & ~accelerator_stall)? 0 : we_out;
+			we_out <= we_out;//(Mem_sel_out[1] & ~accelerator_stall)? 0 : we_out;
 			dst_addr_out <=dst_addr_out;
 			alu_out <= alu_out;
 			Mem_re_out <= Mem_re_out;
 			Mem_we_out <= Mem_we_out;
-			Mem_sel_out <= (Mem_sel_out[1] & ~accelerator_stall)? 0 : Mem_sel_out;
+			Mem_sel_out <= Mem_sel_out;//(Mem_sel_out[1] & ~accelerator_stall)? 0 : Mem_sel_out;
 			d_addr_out <= d_addr_out;
 			wrt_data_out <= wrt_data_out;
 			wt_out <= wt_in;

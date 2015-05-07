@@ -24,7 +24,7 @@ always @(*)
 		J_R = imme;
 endmodule
 
-module Source_MUX(input[1:0] sel, input [15:0] JL_PC, input[15:0] alu, input [15:0] spart, output reg [15:0] data);
+module Source_MUX(input[1:0] sel, input [15:0] JL_PC, input[15:0] alu, input [15:0] spart, output reg [15:0] data, input [15:0] Acc);
 always @(*)
 	case (sel)
 		2'b00:
@@ -34,7 +34,7 @@ always @(*)
 		2'b10:
 			data = spart;
 		default:
-			data = alu;
+			data = Acc;
 	endcase
 endmodule
 

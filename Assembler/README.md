@@ -20,10 +20,12 @@ Instruction format:
 	9. B <Cond> <Imme or Flag>
 	10. JL <Imme or Flag>
 	11. JR <Rd> <Set_Mode> or JR <Rd>
-	12. Send <Rd> <Send_Mode> or Send <Imme> or Send <Char> or Send <String>
-	13. Set <Set_Mode>
-	14. Rv <Rd> <Device> <Imme>
-	15. @<4-bit HEX>
+	12. Ctrl <Rd> <Acc_Mode> <Imme>
+	13. Send <Rd> <Send_Mode> or Send <Imme> or Send <Char> or Send <String>
+	14. Set <Set_Mode>
+	15. Rv <Rd> <Device> <Imme>
+	16. Addi <Rd> <Rs> <Rt>
+	17. @<4-bit HEX>
 
 \<Set_Mode> : idle, user, previous.
 
@@ -41,7 +43,9 @@ Instruction format:
 
 \<String> : A string enclosed by double quotes. Support four escaped characters, \t, \n, \\ and \"
 
-\<Device> : spart. For now only support one device choice
+\<Device> : spart.
+
+\<Acc_Mode> : start, stop, read and nothing
 
 Letters in instruction: Can be capital or lower-case letter, like add or ADD, eq or EQ
 

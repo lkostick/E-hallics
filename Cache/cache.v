@@ -7,36 +7,45 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 	input [15:0] i_addr_pre, d_addr, wrt_data, i_addr, d_addr_pre;
 	input rst, clk, re, we, wt;
 
-	reg [79:0] v_wr_data;
-	reg [74:0] dcache_wr_data;
-	reg [73:0] icache_wr_data;
-	reg [63:0] m_wr_data;
-	reg [13:0] m_addr;
-	reg [1:0] writeLineInd;
+	reg [79:0] v_wr_data;          // vbuffer write bus
+	reg [74:0] dcache_wr_data;	   // dcache write bus
+	reg [73:0] icache_wr_data;     // icache write bus
+	reg [63:0] m_wr_data;          // memory write bus
+	reg [13:0] m_addr;             // mem address
+	reg [1:0] writeLineInd;        // vbuffer write addr
 	reg lru_we, freez, roll, wt_sel, d_we_lru, 
 		setOffset, d_we, d_re, lru_out, i_we, 
 		i_re, v_we, v_re, m_re, m_we;
 
 	assign i_hit = ~freez;
-	assign d_hit = ~freez;
+	assign d_hit = ~freez;          // freez = 1 and stall the whole pipeline
 	wire [79:0] v_rd_data, victimEv_data;
 	wire [79:0] v_rd_data_i,v_rd_data_d;
 	wire [74:0] d_rd_line0, d_rd_line1;
 	wire [73:0] i_rd_data;	
 	wire [63:0] m_rd_data;
+	// mux for select which address to feed the icache
+	// when there is a write through, feed d addr
+	// when there is a write, feed current i addr
 	wire [5:0] i_wr_addr_sel = (i_we==1 && wt_sel == 0) ? i_addr[7:2] : 
 								wt_sel ? d_addr[7:2] : i_addr_pre[7:2];
+	// when there is a write, feed current d addr
 	wire [4:0] lru_addr = lru_we ? d_addr[7:2] : d_addr_pre[7:2];
 	wire [5:0] i_check = i_addr_pre[7:2];
+	// when there is a write, feed current d addr
 	wire [4:0] d_wr_addr_sel = d_we? d_addr[6:2] : d_addr_pre[6:2];
+	// record the state of occupation in vbuffer
 	wire [3:0] emptySlots;
-	wire [1:0] /*v_hit_line, */evict_index;
+	// record the evict line number of vbuffer
+	wire [1:0] evict_index;  
 	wire [1:0] v_hit_line_d, v_hit_line_i;
 	wire v_hit, v_hit_i, v_hit_d, lru_in, i_hitIn;
+	// controls the write of dcache line1 and line2
 	wire we0 = (setOffset == 0 && d_we == 1) ? 1 : 0;
 	wire we1 = (setOffset == 1 && d_we == 1) ? 1 : 0;	
 
 	/* initialize subcomponents */
+	// initialize two d-cache modules & lru bits
 	dcache_s0 dset0 (
 					.clka(clk), // input clka
 					.wea(we0), // input [0 : 0] wea
@@ -58,7 +67,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 				  .dina(lru_out), // input [0 : 0] dina
 				  .douta(lru_in) // output [0 : 0] douta
 				);
-						
+	// initialize icache module			
 	icache icache_dt (
 				  .clka(clk), // input clka
 				  .wea(i_we), // input [0 : 0] wea
@@ -71,17 +80,19 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						v_rd_data_i, v_rd_data_d, v_hit_line_i, v_hit_line_d, v_hit_i, v_hit_d, 
 						evict_index, emptySlots, roll, victimEv_data, 
 						~i_hitIn);	
-						
+	// main memory pool				
 	main_mem u_mem(clk, m_we, m_addr, m_wr_data, m_rd_data);
 
-	// memory delay simulation!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// memory delay simulation
+	// count 4 cycles when there is  a write request
+	// return mem-rdy when the transaction is finished
 	reg [1:0] mem_cntr;
 	reg mem_state, mem_nxtState;
 	reg mem_cntr_en;
 	localparam waitc = 1'b0;
 	localparam count = 1'b1;
 	wire m_rdy = (mem_state == waitc) ? 1 : 0;
-	
+	// counter that counts number of cycles for delay
 	always @ (posedge clk/*, posedge rst*/) begin
 		if(rst) begin
 			mem_cntr <= 0;
@@ -90,6 +101,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 			mem_cntr <= mem_cntr+1;
 		end
 	end
+	// define the state machine for mem-delay simulation
 	always @ (posedge clk/*, posedge rst*/) begin
 		if(rst) begin
 			mem_state <= 0;
@@ -103,12 +115,15 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		mem_nxtState = waitc;
 		
 		case(mem_state)
+			// when there is no mem re/we action
+			// spin and wait
 			waitc: begin
 				if(m_re | m_we) begin
 					mem_nxtState = count;
 					mem_cntr_en = 1;
 				end
 			end
+			// else count until the cntr reach zero again.
 			count: begin
 				if(mem_cntr == 0) begin
 					mem_nxtState = waitc;
@@ -123,6 +138,47 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 	
 
 	// state defn
+	/**
+	 * normal: handles all kinds of request, when there is a hit, it will
+	 * return to itself; else it will jump to corresponding states
+	 * the feeding sequence is: write through->imiss->dmiss
+	 *
+	 * dfetch: fetch data from memory and write it to d cache
+	 *
+	 * ifetch: fetch data from memory and write it to i cache
+	 *
+	 * ievict: evict i cache line to victim buffer, if there is
+	 * a need to evict vbuffer, evict that line to memory first
+	 *
+	 * devict: evict d cache line to victim buffer, if there is
+	 * a need to evict vbuffer, evict that line to memory first
+	 *
+	 * hDetect: hazard detection for write through. Will send state
+	 * machine to corresponding states when there is a hit in either
+	 * icache, dcache, vbuffer or none. Will also invalidate icache
+	 * first
+	 *
+	 * write_through: read memory line from main memory, in case
+	 * when there is no hit in current cache system, we need other 3 words
+	 * before we write back
+	 *
+	 * hdevict: handle the case when there is a hit in either d-cache or vbuffer
+	 * or both. Will choose the fastest way to flush the line and resume the
+	 * feeding process
+	 *
+	 * mem_write: memory write stage for writting data during the write through
+	 * action
+	 *
+	 * spin: spin wait one cycle deliberately since we need to prefeed the 
+	 * addr to block RAM before it reads the desired line.
+	 * it is used when the blockRAM addr port was previously occupied by other
+	 * addresses.
+	 *
+	 * itest: in case for a write through action, an extra icache miss detection
+	 * state is need so that the controller will not miss icache miss in 
+	 * corner cases(i.e. when there is a icache miss at write through state)
+	 *
+	 */
 	localparam
 	 	normal=4'b0000,
 		dfetch=4'b0001,
@@ -135,9 +191,10 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		mem_write = 4'b1000,
 		spin = 4'b1001,
 		itest = 4'b1010,
-		vexp = 4'b1011;
 	reg [3:0] state, nextState;
 	reg [3:0] emptySlots_reg;
+
+	// accept and hold empty slots register for one cycle
 	always @(posedge clk/*, posedge rst*/) begin
 		if(rst) begin
 			emptySlots_reg <= 0;
@@ -158,7 +215,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		end
 	end
 
-	//reg d_update;
+	// cache related signals for convenience
 	wire [7:0] i_tag = i_rd_data[71:64];
 	wire [7:0] i_dst_tag = i_addr[15:8];
 	wire [8:0] d_tag0 = d_rd_line0[72:64];
@@ -255,16 +312,18 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 		wt_sel = 0;
 		d_we_lru = 0;
 		
-		//rstcntr = 0;
 
 		case(state)
 			normal: begin
+				// write through detect first
 				if(wt == 1) begin
 					freez = 1;
 					nextState = hDetect;
 					wt_sel = 1;
 				end
+				// icache miss detection
 				else if(i_hitIn == 0 && wt == 0) begin
+					// if miss and vbuffer miss
 					if(v_hit_i == 0) begin
 						freez = 1;
 						if(i_valid == 0) begin
@@ -281,6 +340,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 							end
 						end
 					end
+					// else swap the content and wait one cycle for address feeding
 					else begin
 						i_output_sel = 1;
 						v_wr_data = {i_rd_data[73:72], i_rd_data[71:64], i_addr[7:2], i_rd_data[63:0]};					
@@ -291,6 +351,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						nextState = spin;
 					end
 				end
+				// dcache miss detection
 				else if(re == 1) begin
 					if(d_hitIn == 1) begin
 						nextState = normal;
@@ -303,6 +364,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 								  (d_valid1 == 0) ? 1 :
 								  ~lru_in;
 						dcache_wr_data = {v_rd_data_d[79:78], v_rd_data_d[77:69], v_rd_data_d[63:0]};
+						// if miss and vbuffer miss, go to either dfetch or devict
 						if(v_hit_d == 0) begin
 							freez = 1;
 							if((d_valid0 == 0) || (d_valid1 == 0)) begin
@@ -320,6 +382,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 								end
 							end
 						end
+						// else swap the buffer and spin a cycle
 						else begin
 							d_output_sel = 1;
 							if(lru_out == 0) begin
@@ -336,7 +399,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						end
 					end
 				end
-				// write case;
+				// dcache we detection
 				else if (we == 1) begin
 					if(d_hitIn == 1) begin
 						lru_we = 1;
@@ -347,6 +410,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						setOffset = d_hit_ind;
 						nextState = spin;
 					end
+					// if dcache miss, then test vbuffer
 					else begin	
 						dcache_wr_data = {2'b11, v_rd_data_d[77:69], replacement};
 						lru_we = 1;
@@ -370,6 +434,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 								end
 							end
 						end
+						// vbuffer swap operation, spin one cycle
 						else begin
 							w_output_sel = 1;
 							if(lru_out == 0) begin
@@ -386,7 +451,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 							nextState = spin;
 						end
 					end
-				end				
+				end		
+				// normal case, when both hit and not write through		
 				else begin
 					nextState = normal;
 				end
@@ -427,6 +493,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 			hDetect: begin
 				freez = 1;
 				wt_sel = 1;
+				// detect and flush icache hit line
 				if(i_tag == d_addr[15:8]) begin
 					i_we = 1;
 					icache_wr_data = 0;
@@ -466,6 +533,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						nextState = hdevict;
 					end
 					else begin
+					// or we can simply invalidate the vbuffer line
 						v_we = 1;
 						v_wr_data=0;
 						writeLineInd = v_hit_line_d;
@@ -537,13 +605,6 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						d_we = 1;
 						dcache_wr_data = 0;
 						setOffset = d_hit_ind;
-						/*
-						if(v_hit_d == 1) begin
-							v_we = 1;
-							v_wr_data=0;
-							writeLineInd = v_hit_line_d;
-						end
-						*/
 					end
 					else begin
 						v_we = 1;
@@ -560,6 +621,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 				if(emptySlots_reg != 4'b1111) begin
 					v_we = 1;
 					v_wr_data = {i_rd_data[73:72], i_rd_data[71:64], i_addr[7:2], i_rd_data[63:0]};
+					// handle different occupation stats
+					// TODO: could be replaced by casex for simplicity and area
 					case(emptySlots_reg)
 						4'b0000: writeLineInd = 0;
 						4'b0001: writeLineInd = 0;
@@ -576,7 +639,6 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 						4'b1100: writeLineInd = 2;
 						4'b1101: writeLineInd = 2;
 						4'b1110: writeLineInd = 3;
-						//4'b0000: writeLineInd = 0;
 						default: writeLineInd = 0;
 					endcase
 					nextState = ifetch;	
@@ -624,6 +686,8 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					v_we = 1;
 					v_wr_data = (lru_in == 0) ? {d_rd_line0[74:73], d_rd_line0[72:64], d_addr[6:2], d_rd_line0[63:0]} :
 												{d_rd_line1[74:73], d_rd_line1[72:64], d_addr[6:2], d_rd_line1[63:0]};
+					// handle different occupation stats
+					// TODO: could be replaced by casex for simplicity and area
 					case(emptySlots_reg)
 						4'b0000: writeLineInd = 0;
 						4'b0001: writeLineInd = 0;
@@ -708,6 +772,7 @@ module cache(clk, rst, i_addr_pre, i_addr, instr, i_hit, d_data, d_hit, d_addr_p
 					nextState = normal;
 				end
 			end
+			// spin wait white freezing the pipeline
 			spin: begin
 				freez = 1;
 				nextState = normal;

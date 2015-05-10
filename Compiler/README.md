@@ -71,3 +71,4 @@ Special function:
 	4. __accelerator_stop;
 	5. __accelerator_send_text(<data>, <addr>);
 	6. __accelerator_get_performance(<level>);
+	7. __sleep;
